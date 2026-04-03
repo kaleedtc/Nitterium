@@ -9,6 +9,7 @@ Features:
 * Nitter Integration: Browse via your preferred instance.
 * Subscriptions: Save and re-arrange accounts locally via drag-and-drop.
 * Image Viewer: Swipe to dismiss and direct downloads.
+* Pull-to-Refresh: Swipe down to reload content seamlessly.
 * Dynamic Theming: Material 3 design adapts to system theme.
 * Modern UI: Fast and responsive native interface.
 * Deep Linking: Intercepts Twitter/X/Nitter links automatically.

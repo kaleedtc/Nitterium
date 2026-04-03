@@ -26,6 +26,7 @@ While browsing Nitter on Android, I needed a way to subscribe to accounts I was 
 * 🕸️ **Nitter Integration**: Browse seamlessly using your preferred Nitter instance via a custom WebView wrapper.
 * 📌 **Subscriptions**: Save and manage your favorite accounts locally on your device. Each account can be rearranged individually by dragging and dropping to suit your preferences!
 * 🖼️ **Intuitive Image Viewer**: Easily exit the image viewer by swiping up or down, and download images directly to your device.
+* 🔄 **Pull-to-Refresh**: Swipe down to reload content seamlessly.
 * 🎨 **Dynamic Theming**: Beautiful Material 3 design that automatically adapts to your system theme and wallpaper (Android 12+).
 * 🚀 **Modern UI**: A fast, responsive user interface built entirely with Kotlin and Jetpack Compose.
 * 🔗 **Deep Linking**: Automatically intercepts Twitter, X, and Nitter links to open them directly in the app.
