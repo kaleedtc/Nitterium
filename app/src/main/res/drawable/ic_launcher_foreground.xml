@@ -1,0 +1,65 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <group
+        android:translateX="54"
+        android:translateY="54"
+        android:scaleX="0.8"
+        android:scaleY="0.8"> <!-- Scaled down to create "centered identity" look -->
+        
+        <group android:rotation="-40">
+            <path
+                android:pathData="M 0,-12 A 36,12 0 1,1 0,12 A 36,12 0 1,1 0,-12 Z"
+                android:strokeWidth="4">
+                <aapt:attr name="android:strokeColor">
+                    <gradient
+                        android:startX="-36"
+                        android:startY="-12"
+                        android:endX="36"
+                        android:endY="12"
+                        android:type="linear">
+                        <item android:color="#1DA1F2" android:offset="0.0" />
+                        <item android:color="#14171A" android:offset="1.0" />
+                    </gradient>
+                </aapt:attr>
+            </path>
+        </group>
+
+        <path
+            android:pathData="M 27.5,-28.1 A 5,5 0 1,1 27.5,-18.1 A 5,5 0 1,1 27.5,-28.1 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:startX="22"
+                    android:startY="-28"
+                    android:endX="32"
+                    android:endY="-18"
+                    android:type="linear">
+                    <item android:color="#1DA1F2" android:offset="0.0" />
+                    <item android:color="#14171A" android:offset="1.0" />
+                </gradient>
+            </aapt:attr>
+        </path>
+            
+        <path
+            android:pathData="M -16,22 L -16,-22 L 16,22 L 16,-22"
+            android:strokeWidth="12"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round">
+            <aapt:attr name="android:strokeColor">
+                <gradient
+                    android:startX="-16"
+                    android:startY="-22"
+                    android:endX="16"
+                    android:endY="22"
+                    android:type="linear">
+                    <item android:color="#1DA1F2" android:offset="0.0" />
+                    <item android:color="#14171A" android:offset="1.0" />
+                </gradient>
+            </aapt:attr>
+        </path>
+    </group>
+</vector>

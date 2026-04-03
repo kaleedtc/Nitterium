@@ -1,0 +1,16 @@
+Nitterium is a modern, native Android app that provides a clean, privacy-respecting way to consume Twitter/X content. By leveraging Nitter instances, it avoids tracking and requires no user account, all wrapped in a beautiful Jetpack Compose interface.
+
+This app allowing you to browse Twitter/X content without an account and subscribe to your favorite user profiles.
+
+Important: This depends entirely on Nitter persistence and the operational state of public Nitter instances. It's important to check the source and health of the instance you are using.
+
+Features:
+* Privacy First: No ads, tracking, or account required.
+* Nitter Integration: Browse via your preferred instance.
+* Subscriptions: Save and re-arrange accounts locally via drag-and-drop.
+* Image Viewer: Swipe to dismiss and direct downloads.
+* Dynamic Theming: Material 3 design adapts to system theme.
+* Modern UI: Fast and responsive native interface.
+* Deep Linking: Intercepts Twitter/X/Nitter links automatically.
+* RTL Support: Supports RTL content by default.
+* FOSS: 100% open-source software.
