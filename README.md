@@ -80,20 +80,6 @@ Nitterium respects your privacy and requests only the absolute minimum permissio
 
 ---
 
-## 🏗️ BUILDING
-
-To build Nitterium from source, you will need the Android SDK. You can build the debug APK using the included Gradle wrapper:
-
-```bash
-git clone https://github.com/kaleedtc/Nitterium.git
-cd Nitterium
-./gradlew assembleDebug
-```
-
-The resulting APK will be located at `app/build/outputs/apk/debug/app-debug.apk`.
-
----
-
 ## 🛠️ BUILT WITH
 
 * **Kotlin**
