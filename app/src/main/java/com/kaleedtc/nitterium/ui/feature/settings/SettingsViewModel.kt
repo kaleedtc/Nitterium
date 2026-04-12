@@ -36,22 +36,36 @@ class SettingsViewModel(
                     preferencesRepository.instanceUrl,
                     preferencesRepository.dynamicColor,
                     preferencesRepository.trueBlack,
-                    ::Triple
-                ),
-                combine(
                     preferencesRepository.enableSiteHeader,
-                    preferencesRepository.showNavLabels,
+                    preferencesRepository.showNavLabels
+                ) { url, dynamic, trueBlack, siteHeader, showLabels -> 
+                    listOf(url, dynamic, trueBlack, siteHeader, showLabels) 
+                },
+                combine(
                     preferencesRepository.darkTheme,
-                    ::Triple
-                ),
-                _instanceSettings
-            ) { (url, dynamic, trueBlack), (siteHeader, showLabels, dark), instanceSettings ->
+                    preferencesRepository.blockDirectX,
+                    _instanceSettings
+                ) { dark, blockDirectX, instanceSettings -> 
+                    listOf(dark, blockDirectX, instanceSettings) 
+                }
+            ) { group1, group2 ->
+                val url = group1[0] as String
+                val dynamic = group1[1] as Boolean
+                val trueBlack = group1[2] as Boolean
+                val siteHeader = group1[3] as Boolean
+                val showLabels = group1[4] as Boolean
+                
+                val dark = group2[0] as Boolean?
+                val blockDirectX = group2[1] as Boolean
+                val instanceSettings = group2[2] as NitterInstanceSettings
+                
                 SettingsState(
                     instanceUrl = url,
                     isDynamicColor = dynamic,
                     isTrueBlack = trueBlack,
                     isSiteHeaderEnabled = siteHeader,
                     isNavLabelsEnabled = showLabels,
+                    isBlockDirectXEnabled = blockDirectX,
                     isDarkTheme = dark,
                     availableInstances = availableInstances,
                     instanceSettings = instanceSettings,
@@ -115,6 +129,11 @@ class SettingsViewModel(
             is SettingsEvent.UpdateNavLabels -> {
                 viewModelScope.launch {
                     preferencesRepository.setShowNavLabels(event.enabled)
+                }
+            }
+            is SettingsEvent.UpdateBlockDirectX -> {
+                viewModelScope.launch {
+                    preferencesRepository.setBlockDirectX(event.enabled)
                 }
             }
             is SettingsEvent.UpdateDarkTheme -> {

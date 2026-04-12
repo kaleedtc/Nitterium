@@ -49,6 +49,7 @@
     <string name="dynamic_color">Dynamic Color</string>
     <string name="true_black">True Black (OLED)</string>
     <string name="show_nav_labels">Show Navigation Labels</string>
+    <string name="block_direct_x">Block Direct Connections to X (Twitter)</string>
     <string name="theme_mode">Theme Mode</string>
     <string name="system_default">System Default</string>
     <string name="light">Light</string>

@@ -185,6 +185,7 @@ fun ProfileContent(
                         url = state.currentUrl,
                         isTrueBlack = state.isTrueBlack,
                         isSiteHeaderEnabled = state.isSiteHeaderEnabled,
+                        isBlockDirectXEnabled = state.isBlockDirectXEnabled,
                         darkTheme = isDarkTheme,
                         isRefreshing = state.isRefreshing,
                         isProfileView = true,

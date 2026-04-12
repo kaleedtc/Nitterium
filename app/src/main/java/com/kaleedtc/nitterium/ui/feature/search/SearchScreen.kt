@@ -227,6 +227,7 @@ fun SearchContent(
                             url = state.currentUrl,
                             isTrueBlack = state.isTrueBlack,
                             isSiteHeaderEnabled = state.isSiteHeaderEnabled,
+                            isBlockDirectXEnabled = state.isBlockDirectXEnabled,
                             darkTheme = isDarkTheme,
                             isRefreshing = state.isRefreshing,
                             isProfileView = state.currentUsername != null,

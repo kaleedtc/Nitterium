@@ -25,6 +25,7 @@ data class ProfileState(
     val isSubscribed: Boolean = false,
     val isTrueBlack: Boolean = false,
     val isSiteHeaderEnabled: Boolean = false,
+    val isBlockDirectXEnabled: Boolean = true,
     val showUnsubscribeDialog: Boolean = false,
     val isConnected: Boolean = true
 )

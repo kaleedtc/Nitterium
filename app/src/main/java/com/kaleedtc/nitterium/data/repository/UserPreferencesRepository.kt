@@ -24,6 +24,7 @@ class UserPreferencesRepository(
         val TRUE_BLACK = booleanPreferencesKey("true_black")
         val ENABLE_SITE_HEADER = booleanPreferencesKey("enable_site_header")
         val SHOW_NAV_LABELS = booleanPreferencesKey("show_nav_labels")
+        val BLOCK_DIRECT_X = booleanPreferencesKey("block_direct_x")
     }
 
     val instanceUrl: Flow<String> = context.dataStore.data
@@ -55,6 +56,11 @@ class UserPreferencesRepository(
     val showNavLabels: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.SHOW_NAV_LABELS] ?: true
+        }
+
+    val blockDirectX: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.BLOCK_DIRECT_X] ?: true
         }
 
     suspend fun setInstanceUrl(url: String) {
@@ -94,6 +100,12 @@ class UserPreferencesRepository(
     suspend fun setShowNavLabels(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.SHOW_NAV_LABELS] = enabled
+        }
+    }
+
+    suspend fun setBlockDirectX(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.BLOCK_DIRECT_X] = enabled
         }
     }
 }

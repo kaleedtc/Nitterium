@@ -13,6 +13,7 @@ data class SearchState(
     val avatarUrl: String? = null,
     val isTrueBlack: Boolean = false,
     val isSiteHeaderEnabled: Boolean = false,
+    val isBlockDirectXEnabled: Boolean = true,
     val showUnsubscribeDialog: Boolean = false,
     val isConnected: Boolean = true
 )

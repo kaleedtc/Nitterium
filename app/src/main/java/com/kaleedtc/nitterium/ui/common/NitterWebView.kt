@@ -11,6 +11,7 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
@@ -48,6 +49,7 @@ fun NitterWebView(
     url: String,
     isTrueBlack: Boolean,
     isSiteHeaderEnabled: Boolean,
+    isBlockDirectXEnabled: Boolean,
     darkTheme: Boolean,
     onPageStarted: (String) -> Unit,
     onPageFinished: (String, WebView) -> Unit,
@@ -490,6 +492,25 @@ fun NitterWebView(
                                     error?.description.toString()
                                 )
                             }
+                        }
+
+                        override fun shouldInterceptRequest(
+                            view: WebView?,
+                            request: WebResourceRequest?
+                        ): WebResourceResponse? {
+                            if (isBlockDirectXEnabled) {
+                                val requestHost = request?.url?.host?.lowercase()
+                                if (requestHost != null) {
+                                    val isTwitterDomain = requestHost == "twitter.com" || requestHost.endsWith(".twitter.com") ||
+                                                          requestHost == "x.com" || requestHost.endsWith(".x.com") ||
+                                                          requestHost == "twimg.com" || requestHost.endsWith(".twimg.com")
+                                    
+                                    if (isTwitterDomain) {
+                                        return WebResourceResponse("text/plain", "UTF-8", java.io.ByteArrayInputStream(ByteArray(0)))
+                                    }
+                                }
+                            }
+                            return super.shouldInterceptRequest(view, request)
                         }
 
                         override fun shouldOverrideUrlLoading(

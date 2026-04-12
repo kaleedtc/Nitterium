@@ -34,6 +34,11 @@ class SearchViewModel(
                 setState { copy(isSiteHeaderEnabled = enabled) }
             }
         }
+        viewModelScope.launch {
+            preferencesRepository.blockDirectX.collect { enabled ->
+                setState { copy(isBlockDirectXEnabled = enabled) }
+            }
+        }
     }
 
     fun loadUsername(username: String) {

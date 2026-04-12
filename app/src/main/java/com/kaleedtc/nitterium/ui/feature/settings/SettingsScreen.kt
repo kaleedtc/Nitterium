@@ -227,6 +227,12 @@ fun AppSettingsList(
                 onCheckedChange = { onEvent(SettingsEvent.UpdateNavLabels(it)) }
             )
 
+            SettingsSwitch(
+                label = stringResource(R.string.block_direct_x),
+                checked = state.isBlockDirectXEnabled,
+                onCheckedChange = { onEvent(SettingsEvent.UpdateBlockDirectX(it)) }
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
             Text(text = stringResource(R.string.theme_mode), style = MaterialTheme.typography.bodyLarge)
         }

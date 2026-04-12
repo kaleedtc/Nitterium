@@ -8,6 +8,7 @@ data class SettingsState(
     val isTrueBlack: Boolean = false,
     val isSiteHeaderEnabled: Boolean = false,
     val isNavLabelsEnabled: Boolean = true,
+    val isBlockDirectXEnabled: Boolean = true,
     val isDarkTheme: Boolean? = null, // null = System
     val availableInstances: List<String> = emptyList(),
     val instanceSettings: NitterInstanceSettings = NitterInstanceSettings(),
@@ -20,6 +21,7 @@ sealed interface SettingsEvent {
     data class UpdateTrueBlack(val enabled: Boolean) : SettingsEvent
     data class UpdateSiteHeader(val enabled: Boolean) : SettingsEvent
     data class UpdateNavLabels(val enabled: Boolean) : SettingsEvent
+    data class UpdateBlockDirectX(val enabled: Boolean) : SettingsEvent
     data class UpdateDarkTheme(val isDark: Boolean?) : SettingsEvent
     data class UpdateInstanceSetting(val key: String, val value: Boolean) : SettingsEvent
     data class OpenUrl(val url: String) : SettingsEvent

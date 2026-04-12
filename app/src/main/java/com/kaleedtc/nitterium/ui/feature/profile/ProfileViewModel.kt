@@ -32,6 +32,11 @@ class ProfileViewModel(
                 setState { copy(isSiteHeaderEnabled = enabled) }
             }
         }
+        viewModelScope.launch {
+            preferencesRepository.blockDirectX.collect { enabled ->
+                setState { copy(isBlockDirectXEnabled = enabled) }
+            }
+        }
     }
 
     override fun onEvent(event: ProfileEvent) {
