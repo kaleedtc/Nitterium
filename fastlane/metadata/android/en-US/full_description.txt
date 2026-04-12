@@ -5,6 +5,7 @@ This app allowing you to browse Twitter/X content without an account and subscri
 Important: This depends entirely on Nitter persistence and the operational state of public Nitter instances. It's important to check the source and health of the instance you are using.
 
 Features:
+
 * Privacy First: No ads, tracking, or account required.
 * Nitter Integration: Browse via your preferred instance.
 * Subscriptions: Save and re-arrange accounts locally via drag-and-drop.
