@@ -39,16 +39,13 @@ While browsing Nitter on Android, I needed a way to subscribe to accounts I was 
 
 Nitterium can be downloaded from:
 - **GitHub Releases**: Get the latest APK directly from the [Releases page](https://github.com/kaleedtc/Nitterium/releases).
-- **IzzyOnDroid**: Add the IzzyOnDroid repository to your favorite F-Droid client.
 - **Obtainium**: Keep track of direct APK updates seamlessly.
 
 <p align="left">
   <a href="https://github.com/kaleedtc/Nitterium/releases">
     <img src="assets/badge_github.png" height="150" alt="Get it on GitHub">
   </a>
-  <a href="https://apt.izzysoft.de/fdroid/index/apk/com.kaleedtc.nitterium">
-    <img src="assets/badge_izzyondroid.png" height="150" alt="Get it on IzzyOnDroid">
-  </a>
+ 
   <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/kaleedtc/Nitterium">
     <img src="assets/badge_obtainium.png" height="150" alt="Get it on Obtainium">
   </a>
