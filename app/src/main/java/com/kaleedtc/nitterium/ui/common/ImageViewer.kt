@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.provider.MediaStore
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -73,6 +74,8 @@ fun ImageViewer(
         targetValue = (1f - (abs(offsetY) / 600f)).coerceIn(0f, 1f),
         label = "alpha"
     )
+
+    BackHandler(onBack = { onDismiss() })
 
     Box(
         modifier = Modifier
