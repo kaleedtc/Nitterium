@@ -1,0 +1,4 @@
+- Added new option to block direct connections to X (turned on by default).
+- Added back gesture to image viewer.
+- Fix subscription avatar.
+- Under the hood: Updated internal app components and libraries for better performance and stability.
