@@ -5,9 +5,15 @@
 <h1 align="left">Nitterium</h1>
 
 <p align="left">
-  <strong>A privacy-focused Android app and wrapper for Nitter, allowing you to browse Twitter/X content without an account and subscribe to your favorite user profiles.</strong>
+  <img src="https://img.shields.io/badge/Android-3DDC84?style=flat&logo=android&logoColor=white" alt="Android"/>
+  <img src="https://img.shields.io/badge/API-31%2B-brightgreen.svg?style=flat" alt="API"/>
+  <img src="https://img.shields.io/badge/Kotlin-2.3.20-7F52FF?style=flat&logo=Kotlin&logoColor=white" alt="Kotlin"/>
+  <img src="https://img.shields.io/badge/Jetpack%20Compose-4285F4?style=flat&logo=jetpack-compose&logoColor=white" alt="Jetpack Compose"/>
+  <img src="https://img.shields.io/github/license/kaleedtc/Nitterium?style=flat" alt="License"/>
+  <a href="https://github.com/kaleedtc/Nitterium/releases/latest">
+  <img src="https://img.shields.io/github/v/release/kaleedtc/Nitterium?style=flat&label=Release&logo=github" alt="Release"/>
 </p>
-
+     
 ---
 
 **Nitterium** is a modern, native Android app that provides a clean, privacy-respecting way to consume Twitter/X content. By leveraging Nitter instances, it avoids tracking and requires no user account, all wrapped in a beautiful Jetpack Compose interface.
