@@ -201,12 +201,20 @@ fun ProfileContent(
                             view.evaluateJavascript(
                                 """
                                 (function() {
-                                    var avatar = document.querySelector('a.profile-card-avatar');
                                     var url = null;
+                                    var avatar = document.querySelector('a.profile-card-avatar');
                                     if (avatar) {
                                          url = avatar.href; 
                                     }
                                     if (!url) {
+                                        var mainTweetAvatar = document.querySelector('.main-tweet .tweet-avatar img');
+                                        if (mainTweetAvatar) url = mainTweetAvatar.src;
+                                    }
+                                    if (!url) {
+                                        var anyAvatar = document.querySelector('.tweet-avatar img');
+                                        if (anyAvatar) url = anyAvatar.src;
+                                    }
+                                    if (!url && window.location.pathname.indexOf('/status/') === -1) {
                                         var meta = document.querySelector('meta[property="og:image"]');
                                         if (meta) url = meta.content;
                                     }
