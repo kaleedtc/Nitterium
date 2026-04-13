@@ -2,3 +2,4 @@
 - Added back gesture to image viewer.
 - Fix subscription avatar.
 - Under the hood: Updated internal app components and libraries for better performance and stability.
+
