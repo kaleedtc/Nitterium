@@ -359,7 +359,10 @@ fun NitterWebView(
     val latestOnPageStarted by rememberUpdatedState(onPageStarted)
     val latestOnPageFinished by rememberUpdatedState(onPageFinished)
     val latestOnPageError by rememberUpdatedState(onPageError)
-    val latestIsBlockDirectXEnabled by rememberUpdatedState(isBlockDirectXEnabled)
+    
+    // Use an array to pass the boolean reference safely to the AndroidView factory closure
+    val blockDirectXState = remember { BooleanArray(1) }
+    blockDirectXState[0] = isBlockDirectXEnabled
 
     Box(modifier = modifier.fillMaxSize()) {
         var webViewRef by remember { mutableStateOf<WebView?>(null) }
@@ -499,7 +502,7 @@ fun NitterWebView(
                             view: WebView?,
                             request: WebResourceRequest?
                         ): WebResourceResponse? {
-                            if (latestIsBlockDirectXEnabled) {
+                            if (blockDirectXState[0]) {
                                 val requestHost = request?.url?.host?.lowercase()
                                 if (requestHost != null) {
                                     val isTwitterDomain = requestHost == "twitter.com" || requestHost.endsWith(".twitter.com") ||
@@ -507,7 +510,9 @@ fun NitterWebView(
                                                           requestHost == "twimg.com" || requestHost.endsWith(".twimg.com")
                                     
                                     if (isTwitterDomain) {
-                                        return WebResourceResponse("text/plain", "UTF-8", java.io.ByteArrayInputStream(ByteArray(0)))
+                                        val emptyStream = java.io.ByteArrayInputStream(ByteArray(0))
+                                        val headers = mapOf("Cache-Control" to "no-store, no-cache", "Pragma" to "no-cache")
+                                        return WebResourceResponse("text/plain", "UTF-8", 403, "Blocked", headers, emptyStream)
                                     }
                                 }
                             }
