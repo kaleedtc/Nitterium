@@ -1,0 +1,2 @@
+- Bug Fix: Ensure NitterWebView respects real-time blockDirectX setting
+- Updated Android Gradle Plugin (AGP) version to 9.1.1.
