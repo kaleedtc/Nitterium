@@ -230,7 +230,13 @@ fun AppSettingsList(
             SettingsSwitch(
                 label = stringResource(R.string.block_direct_x),
                 checked = state.isBlockDirectXEnabled,
-                onCheckedChange = { onEvent(SettingsEvent.UpdateBlockDirectX(it)) }
+                onCheckedChange = { onEvent(SettingsEvent.UpdateBlockDirectX(it)) },
+                icon = {
+                    SettingsInfoIcon(
+                        title = stringResource(R.string.block_direct_x),
+                        description = stringResource(R.string.block_direct_x_description)
+                    )
+                }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
