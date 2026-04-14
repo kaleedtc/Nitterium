@@ -359,6 +359,7 @@ fun NitterWebView(
     val latestOnPageStarted by rememberUpdatedState(onPageStarted)
     val latestOnPageFinished by rememberUpdatedState(onPageFinished)
     val latestOnPageError by rememberUpdatedState(onPageError)
+    val latestIsBlockDirectXEnabled by rememberUpdatedState(isBlockDirectXEnabled)
 
     Box(modifier = modifier.fillMaxSize()) {
         var webViewRef by remember { mutableStateOf<WebView?>(null) }
@@ -498,7 +499,7 @@ fun NitterWebView(
                             view: WebView?,
                             request: WebResourceRequest?
                         ): WebResourceResponse? {
-                            if (isBlockDirectXEnabled) {
+                            if (latestIsBlockDirectXEnabled) {
                                 val requestHost = request?.url?.host?.lowercase()
                                 if (requestHost != null) {
                                     val isTwitterDomain = requestHost == "twitter.com" || requestHost.endsWith(".twitter.com") ||
