@@ -229,11 +229,11 @@ fun NitterWebView(
 
     fun getSiteHeaderCss(currentUrl: String?): String {
         if (isSiteHeaderEnabled) return ""
-        
+
         // Prioritize actual URL check. If the URL is a global-reserved page (like /search),
         // we always use strict CSS to hide the search bar, even if the screen context is "Profile".
         val isProfile = if (currentUrl.isNullOrEmpty()) isProfileView else isProfileUrl(currentUrl)
-        
+
         return if (isProfile) {
             "nav, .site-header, .header, .search-header { display: none !important; }"
         } else {
@@ -359,14 +359,15 @@ fun NitterWebView(
     val latestOnPageStarted by rememberUpdatedState(onPageStarted)
     val latestOnPageFinished by rememberUpdatedState(onPageFinished)
     val latestOnPageError by rememberUpdatedState(onPageError)
-    
+
     // Use an array to pass the boolean reference safely to the AndroidView factory closure
     val blockDirectXState = remember { BooleanArray(1) }
     blockDirectXState[0] = isBlockDirectXEnabled
 
     Box(modifier = modifier.fillMaxSize()) {
         var webViewRef by remember { mutableStateOf<WebView?>(null) }
-        val webViewStateBundle = rememberSaveable(saver = Saver(
+        val webViewStateBundle = rememberSaveable(
+            saver = Saver(
             save = {
                 val bundle = Bundle()
                 webViewRef?.saveState(bundle)
@@ -376,7 +377,7 @@ fun NitterWebView(
         )) { Bundle() }
 
         val lifecycleOwner = LocalLifecycleOwner.current
-        
+
         // Re-inject theme when it changes to ensure it's always up to date
         // even without a page reload (e.g. when switching system theme).
         LaunchedEffect(currentThemeCss, trueBlackCss, darkTheme) {
@@ -444,7 +445,7 @@ fun NitterWebView(
                         ViewGroup.LayoutParams.MATCH_PARENT
                     )
                     setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                    
+
                     settings.apply {
                         javaScriptEnabled = true
                         domStorageEnabled = true
@@ -505,14 +506,25 @@ fun NitterWebView(
                             if (blockDirectXState[0]) {
                                 val requestHost = request?.url?.host?.lowercase()
                                 if (requestHost != null) {
-                                    val isTwitterDomain = requestHost == "twitter.com" || requestHost.endsWith(".twitter.com") ||
-                                                          requestHost == "x.com" || requestHost.endsWith(".x.com") ||
-                                                          requestHost == "twimg.com" || requestHost.endsWith(".twimg.com")
-                                    
+                                    val isTwitterDomain =
+                                        requestHost == "twitter.com" || requestHost.endsWith(".twitter.com") ||
+                                                requestHost == "x.com" || requestHost.endsWith(".x.com") ||
+                                                requestHost == "twimg.com" || requestHost.endsWith(".twimg.com")
+
                                     if (isTwitterDomain) {
                                         val emptyStream = java.io.ByteArrayInputStream(ByteArray(0))
-                                        val headers = mapOf("Cache-Control" to "no-store, no-cache", "Pragma" to "no-cache")
-                                        return WebResourceResponse("text/plain", "UTF-8", 403, "Blocked", headers, emptyStream)
+                                        val headers = mapOf(
+                                            "Cache-Control" to "no-store, no-cache",
+                                            "Pragma" to "no-cache"
+                                        )
+                                        return WebResourceResponse(
+                                            "text/plain",
+                                            "UTF-8",
+                                            403,
+                                            "Blocked",
+                                            headers,
+                                            emptyStream
+                                        )
                                     }
                                 }
                             }
@@ -527,20 +539,20 @@ fun NitterWebView(
                             return try {
                                 val currentHost = URL(view?.url ?: url).host
                                 val requestHost = requestUrl.host
-                                
-                                val isInternalHost = requestHost == currentHost || 
-                                                     (requestHost != null && currentHost != null && 
-                                                      requestHost.endsWith(".$currentHost"))
-                                
+
+                                val isInternalHost = requestHost == currentHost ||
+                                        (requestHost != null && currentHost != null &&
+                                                requestHost.endsWith(".$currentHost"))
+
                                 val urlString = requestUrl.toString().lowercase()
-                                val isImageUrl = urlString.contains(".jpg") || 
-                                                 urlString.contains(".jpeg") || 
-                                                 urlString.contains(".png") || 
-                                                 urlString.contains(".gif") || 
-                                                 urlString.contains(".webp") || 
-                                                 requestUrl.path?.contains("/pic/") == true ||
-                                                 requestHost?.contains("pbs.twimg.com") == true
-                                
+                                val isImageUrl = urlString.contains(".jpg") ||
+                                        urlString.contains(".jpeg") ||
+                                        urlString.contains(".png") ||
+                                        urlString.contains(".gif") ||
+                                        urlString.contains(".webp") ||
+                                        requestUrl.path?.contains("/pic/") == true ||
+                                        requestHost?.contains("pbs.twimg.com") == true
+
                                 if (!isInternalHost && !isImageUrl) {
                                     val intent = Intent(Intent.ACTION_VIEW, requestUrl)
                                     context.startActivity(intent)
@@ -568,7 +580,7 @@ fun NitterWebView(
                             customViewCallback?.onCustomViewHidden()
                             customViewCallback = null
                             fullScreenMode.value = false
-                            
+
                             // Restore scroll position after a short delay to allow layout changes to settle
                             this@apply.postDelayed({
                                 this@apply.scrollTo(savedScrollX, savedScrollY)
