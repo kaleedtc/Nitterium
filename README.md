@@ -57,6 +57,8 @@ Nitterium can be downloaded from:
   <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/kaleedtc/Nitterium">
     <img src="assets/badge_obtainium.png" height="150" alt="Get it on Obtainium">
   </a>
+  <a href="https://apt.izzysoft.de/fdroid/index/apk/com.kaleedtc.nitterium">
+    <img src="./assets/badge_izzyondroid.png" height="150" alt="Get it on IzzyOnDroid"></a>
 </p>
 
 ---
