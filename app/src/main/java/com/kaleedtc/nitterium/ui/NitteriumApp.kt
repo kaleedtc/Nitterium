@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -67,6 +68,22 @@ fun NitteriumApp(
     val currentDestination = navBackStackEntry?.destination
     val isFullScreen = LocalFullScreenMode.current.value
 
+    val currentTab = rememberSaveable { mutableStateOf("Search") }
+
+    LaunchedEffect(currentDestination) {
+        if (currentDestination?.hierarchy?.any { it.hasRoute<Search>() } == true) {
+            currentTab.value = "Search"
+        } else if (currentDestination?.hierarchy?.any { it.hasRoute<Subscriptions>() } == true) {
+            currentTab.value = "Subscriptions"
+        } else if (currentDestination?.hierarchy?.any { it.hasRoute<Settings>() } == true) {
+            currentTab.value = "Settings"
+        }
+    }
+
+    val isSubscriptionsFlow = currentTab.value == "Subscriptions"
+    val isSettingsFlow = currentTab.value == "Settings"
+    val isSearchFlow = currentTab.value == "Search"
+
     var deepLinkHandled by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
@@ -75,19 +92,22 @@ fun NitteriumApp(
             if (!isFullScreen) {
                 NavigationBar {
                     NavigationBarItem(
-                        selected = currentDestination?.hierarchy?.any { it.hasRoute<Search>() } == true,
+                        selected = isSearchFlow,
                         onClick = {
-                            navController.navigate(Search()) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                            if (!isSearchFlow) {
+                                currentTab.value = "Search"
+                                navController.navigate(Search()) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
                             }
                         },
                         icon = {
                             Icon(
-                                imageVector = if (currentDestination?.hierarchy?.any { it.hasRoute<Search>() } == true) Icons.Filled.Search else Icons.Outlined.Search,
+                                imageVector = if (isSearchFlow) Icons.Filled.Search else Icons.Outlined.Search,
                                 contentDescription = stringResource(R.string.nav_search)
                             )
                         },
@@ -96,19 +116,22 @@ fun NitteriumApp(
                         } else null
                     )
                     NavigationBarItem(
-                        selected = currentDestination?.hierarchy?.any { it.hasRoute<Subscriptions>() } == true,
+                        selected = isSubscriptionsFlow,
                         onClick = {
-                            navController.navigate(Subscriptions) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                            if (!isSubscriptionsFlow) {
+                                currentTab.value = "Subscriptions"
+                                navController.navigate(Subscriptions) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
                             }
                         },
                         icon = {
                             Icon(
-                                imageVector = if (currentDestination?.hierarchy?.any { it.hasRoute<Subscriptions>() } == true) Icons.AutoMirrored.Filled.List else Icons.AutoMirrored.Outlined.List,
+                                imageVector = if (isSubscriptionsFlow) Icons.AutoMirrored.Filled.List else Icons.AutoMirrored.Outlined.List,
                                 contentDescription = stringResource(R.string.nav_subscriptions)
                             )
                         },
@@ -117,19 +140,22 @@ fun NitteriumApp(
                         } else null
                     )
                     NavigationBarItem(
-                        selected = currentDestination?.hierarchy?.any { it.hasRoute<Settings>() } == true,
+                        selected = isSettingsFlow,
                         onClick = {
-                            navController.navigate(Settings) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                            if (!isSettingsFlow) {
+                                currentTab.value = "Settings"
+                                navController.navigate(Settings) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
                             }
                         },
                         icon = {
                             Icon(
-                                imageVector = if (currentDestination?.hierarchy?.any { it.hasRoute<Settings>() } == true) Icons.Filled.Settings else Icons.Outlined.Settings,
+                                imageVector = if (isSettingsFlow) Icons.Filled.Settings else Icons.Outlined.Settings,
                                 contentDescription = stringResource(R.string.nav_settings)
                             )
                         },
