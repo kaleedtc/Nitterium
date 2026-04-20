@@ -10,6 +10,8 @@
   <img src="https://img.shields.io/badge/Kotlin-2.3.20-7F52FF?style=flat&logo=Kotlin&logoColor=white" alt="Kotlin"/>
   <img src="https://img.shields.io/badge/Jetpack%20Compose-4285F4?style=flat&logo=jetpack-compose&logoColor=white" alt="Jetpack Compose"/>
   <img src="https://img.shields.io/github/license/kaleedtc/Nitterium?style=flat" alt="License"/>
+  <img src="https://shields.rbtlog.dev/simple/com.kaleedtc.nitterium"/>
+  <img src="https://img.shields.io/endpoint?url=https://apt.izzysoft.de/fdroid/api/v1/shield/com.kaleedtc.nitterium&label=IzzyOnDroid"/>
   <a href="https://github.com/kaleedtc/Nitterium/releases/latest">
   <img src="https://img.shields.io/github/v/release/kaleedtc/Nitterium?style=flat&label=Release&logo=github" alt="Release"/>
 </p>
@@ -55,6 +57,8 @@ Nitterium can be downloaded from:
   <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/kaleedtc/Nitterium">
     <img src="assets/badge_obtainium.png" height="150" alt="Get it on Obtainium">
   </a>
+  <a href="https://apt.izzysoft.de/fdroid/index/apk/com.kaleedtc.nitterium">
+    <img src="./assets/badge_izzyondroid.png" height="150" alt="Get it on IzzyOnDroid"></a>
 </p>
 
 ---
