@@ -63,7 +63,7 @@
     <string name="media_playback">Media &amp; Playback</string>
     <string name="hls_playback">HLS Playback</string>
     <string name="proxy_videos">Proxy Videos</string>
-    <string name="proxy_videos_description">Proxy video streaming through the server (might be slow)!</string>
+    <string name="proxy_videos_description">Proxy video streaming through the server. Note: If disabled, you must disable "Block Direct Connections to X" to play videos directly from X servers!</string>
     <string name="mute_videos">Mute Videos</string>
     <string name="autoplay_gifs">Autoplay GIFs</string>
     <string name="navigation">Navigation</string>
