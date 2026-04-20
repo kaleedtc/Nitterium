@@ -86,7 +86,23 @@ class SettingsViewModel(
 
     private fun loadSettingsFromCookies(url: String) {
         val cookieManager = CookieManager.getInstance()
-        val cookies = cookieManager.getCookie(url) ?: ""
+        var cookies = cookieManager.getCookie(url) ?: ""
+
+        var updated = false
+        if (!cookies.contains("hlsPlayback=")) {
+            cookieManager.setCookie(url, "hlsPlayback=on; Path=/; SameSite=Lax")
+            updated = true
+        }
+        if (!cookies.contains("proxyVideos=")) {
+            cookieManager.setCookie(url, "proxyVideos=on; Path=/; SameSite=Lax")
+            updated = true
+        }
+        
+        if (updated) {
+            cookieManager.flush()
+            cookies = cookieManager.getCookie(url) ?: ""
+        }
+
         val settings = NitterInstanceSettings(
             hideTweetStats = cookies.contains("hideTweetStats=on"),
             hideBanner = cookies.contains("hideBanner=on"),
