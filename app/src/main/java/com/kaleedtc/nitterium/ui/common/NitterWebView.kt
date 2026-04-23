@@ -58,6 +58,7 @@ fun NitterWebView(
     modifier: Modifier = Modifier,
     isRefreshing: Boolean = false,
     isProfileView: Boolean = false,
+    isFeedView: Boolean = false,
     onRefresh: () -> Unit = {},
 ) {
     // 0. State for Image Viewer
@@ -234,11 +235,25 @@ fun NitterWebView(
         // we always use strict CSS to hide the search bar, even if the screen context is "Profile".
         val isProfile = if (currentUrl.isNullOrEmpty()) isProfileView else isProfileUrl(currentUrl)
 
-        return if (isProfile) {
-            "nav, .site-header, .header, .search-header { display: none !important; }"
+        var css = if (isProfile) {
+            "nav, .site-header, .header, .search-header"
         } else {
-            "nav, .site-header, .header, .search-header, .timeline-header, .search-bar, form[action*=\"search\"], .search-field, .search-panel { display: none !important; }"
+            "nav, .site-header, .header, .search-header, .timeline-header, .search-bar, form[action*=\"search\"], .search-field, .search-panel"
         }
+        
+        val isActuallyFeedRoot = isFeedView && currentUrl != null && try {
+            val reqPath = URI(url).path.trimEnd('/')
+            val curPath = URI(currentUrl).path.trimEnd('/')
+            reqPath == curPath || (curPath.isEmpty() && reqPath == "/")
+        } catch (_: Exception) {
+            false
+        }
+
+        if (isActuallyFeedRoot) {
+            css += ", .profile-card, .profile-tabs, .profile-banner, .profile-header, .timeline-header, ul.tab"
+        }
+
+        return "$css { display: none !important; }"
     }
 
     fun getJsInjection(currentUrl: String?): String {

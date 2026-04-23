@@ -12,4 +12,7 @@ data class Profile(val username: String)
 object Subscriptions
 
 @Serializable
+object Feed
+
+@Serializable
 object Settings

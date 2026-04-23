@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.outlined.List
+import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.RssFeed
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
@@ -50,6 +52,9 @@ import com.kaleedtc.nitterium.ui.navigation.Profile
 import com.kaleedtc.nitterium.ui.navigation.Search
 import com.kaleedtc.nitterium.ui.navigation.Settings
 import com.kaleedtc.nitterium.ui.navigation.Subscriptions
+import com.kaleedtc.nitterium.ui.navigation.Feed
+import com.kaleedtc.nitterium.ui.feature.feed.FeedScreen
+import com.kaleedtc.nitterium.ui.feature.feed.FeedViewModel
 
 import com.kaleedtc.nitterium.ui.common.LocalFullScreenMode
 
@@ -75,12 +80,15 @@ fun NitteriumApp(
             currentTab.value = "Search"
         } else if (currentDestination?.hierarchy?.any { it.hasRoute<Subscriptions>() } == true) {
             currentTab.value = "Subscriptions"
+        } else if (currentDestination?.hierarchy?.any { it.hasRoute<Feed>() } == true) {
+            currentTab.value = "Feed"
         } else if (currentDestination?.hierarchy?.any { it.hasRoute<Settings>() } == true) {
             currentTab.value = "Settings"
         }
     }
 
     val isSubscriptionsFlow = currentTab.value == "Subscriptions"
+    val isFeedFlow = currentTab.value == "Feed"
     val isSettingsFlow = currentTab.value == "Settings"
     val isSearchFlow = currentTab.value == "Search"
 
@@ -137,6 +145,30 @@ fun NitteriumApp(
                         },
                         label = if (showNavLabels) {
                             { Text(stringResource(R.string.nav_subscriptions)) }
+                        } else null
+                    )
+                    NavigationBarItem(
+                        selected = isFeedFlow,
+                        onClick = {
+                            if (!isFeedFlow) {
+                                currentTab.value = "Feed"
+                                navController.navigate(Feed) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = if (isFeedFlow) Icons.Filled.RssFeed else Icons.Outlined.RssFeed,
+                                contentDescription = stringResource(R.string.nav_feed)
+                            )
+                        },
+                        label = if (showNavLabels) {
+                            { Text(stringResource(R.string.nav_feed)) }
                         } else null
                     )
                     NavigationBarItem(
@@ -235,6 +267,21 @@ fun NitteriumApp(
                     onNavigateToUser = { username ->
                         navController.navigate(Profile(username = username))
                     },
+                    viewModel = viewModel
+                )
+            }
+            composable<Feed> {
+                val viewModel: FeedViewModel = viewModel(
+                    factory = viewModelFactory {
+                        FeedViewModel(
+                            app.userPreferencesRepository,
+                            app.subscriptionRepository,
+                            app.connectivityMonitor
+                        )
+                    }
+                )
+                FeedScreen(
+                    isDarkTheme = isDarkTheme,
                     viewModel = viewModel
                 )
             }
