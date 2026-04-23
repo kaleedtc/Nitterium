@@ -1,0 +1,4 @@
+- Combined Feed Tab: Added a brand new "Feed" tab to the bottom navigation.
+- Custom Nitter Instances: You are no longer limited to the default options.
+- More Default Instances: Added new Nitter instances.
+- Under the Hood: Updated core app dependencies for improved performance and stability.
