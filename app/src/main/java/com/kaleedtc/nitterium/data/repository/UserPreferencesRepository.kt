@@ -25,6 +25,7 @@ class UserPreferencesRepository(
         val ENABLE_SITE_HEADER = booleanPreferencesKey("enable_site_header")
         val SHOW_NAV_LABELS = booleanPreferencesKey("show_nav_labels")
         val BLOCK_DIRECT_X = booleanPreferencesKey("block_direct_x")
+        val CUSTOM_INSTANCES = androidx.datastore.preferences.core.stringSetPreferencesKey("custom_instances")
     }
 
     val instanceUrl: Flow<String> = context.dataStore.data
@@ -62,6 +63,25 @@ class UserPreferencesRepository(
         .map { preferences ->
             preferences[PreferencesKeys.BLOCK_DIRECT_X] ?: true
         }
+
+    val customInstances: Flow<Set<String>> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.CUSTOM_INSTANCES] ?: emptySet()
+        }
+
+    suspend fun addCustomInstance(url: String) {
+        context.dataStore.edit { preferences ->
+            val current = preferences[PreferencesKeys.CUSTOM_INSTANCES] ?: emptySet()
+            preferences[PreferencesKeys.CUSTOM_INSTANCES] = current + url
+        }
+    }
+
+    suspend fun removeCustomInstance(url: String) {
+        context.dataStore.edit { preferences ->
+            val current = preferences[PreferencesKeys.CUSTOM_INSTANCES] ?: emptySet()
+            preferences[PreferencesKeys.CUSTOM_INSTANCES] = current - url
+        }
+    }
 
     suspend fun setInstanceUrl(url: String) {
         context.dataStore.edit { preferences ->

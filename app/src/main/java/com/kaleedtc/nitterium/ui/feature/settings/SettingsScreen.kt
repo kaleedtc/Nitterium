@@ -19,6 +19,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Public
@@ -148,6 +150,43 @@ fun AppSettingsList(
     state: SettingsState,
     onEvent: (SettingsEvent) -> Unit
 ) {
+    var showAddInstanceDialog by remember { mutableStateOf(false) }
+
+    if (showAddInstanceDialog) {
+        var newInstanceUrl by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showAddInstanceDialog = false },
+            title = { Text(stringResource(R.string.add_custom_instance)) },
+            text = {
+                OutlinedTextField(
+                    value = newInstanceUrl,
+                    onValueChange = { newInstanceUrl = it },
+                    label = { Text("URL") },
+                    placeholder = { Text(stringResource(R.string.custom_instance_url_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (newInstanceUrl.isNotBlank()) {
+                            onEvent(SettingsEvent.AddCustomInstance(newInstanceUrl.trim()))
+                        }
+                        showAddInstanceDialog = false
+                    }
+                ) {
+                    Text(stringResource(R.string.add))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddInstanceDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -165,36 +204,67 @@ fun AppSettingsList(
 
             val (expanded, setExpanded) = remember { mutableStateOf(false) }
 
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = setExpanded,
-                modifier = Modifier.fillMaxWidth()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedTextField(
-                    value = state.instanceUrl,
-                    onValueChange = { onEvent(SettingsEvent.UpdateInstanceUrl(it)) },
-                    label = { Text(stringResource(R.string.nitter_instance_url)) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
-                    singleLine = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-                )
-
-                ExposedDropdownMenu(
+                ExposedDropdownMenuBox(
                     expanded = expanded,
-                    onDismissRequest = { setExpanded(false) }
+                    onExpandedChange = setExpanded,
+                    modifier = Modifier.weight(1f)
                 ) {
-                    state.availableInstances.forEach { instance ->
-                        DropdownMenuItem(
-                            text = { Text(instance) },
-                            onClick = {
-                                onEvent(SettingsEvent.UpdateInstanceUrl(instance))
-                                setExpanded(false)
-                            }
-                        )
+                    OutlinedTextField(
+                        value = state.instanceUrl,
+                        onValueChange = { onEvent(SettingsEvent.UpdateInstanceUrl(it)) },
+                        label = { Text(stringResource(R.string.nitter_instance_url)) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
+                        singleLine = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { setExpanded(false) }
+                    ) {
+                        state.availableInstances.forEach { instance ->
+                            DropdownMenuItem(
+                                text = { Text(instance) },
+                                onClick = {
+                                    onEvent(SettingsEvent.UpdateInstanceUrl(instance))
+                                    setExpanded(false)
+                                },
+                                trailingIcon = if (state.customInstances.contains(instance)) {
+                                    {
+                                        IconButton(onClick = {
+                                            onEvent(SettingsEvent.RemoveCustomInstance(instance))
+                                            // Optional: Don't close the menu if you want them to keep managing
+                                        }) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = stringResource(R.string.remove),
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
+                                        }
+                                    }
+                                } else null
+                            )
+                        }
                     }
+                }
+
+                IconButton(
+                    onClick = { showAddInstanceDialog = true },
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = stringResource(R.string.add_custom_instance),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
 

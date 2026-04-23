@@ -18,7 +18,10 @@ class SettingsViewModel(
 
     private val availableInstances = listOf(
         application.getString(R.string.nitter_net_url),
-        application.getString(R.string.xcancel_com_url)
+        application.getString(R.string.xcancel_com_url),
+        application.getString(R.string.nitter_catsarch_com_url),
+        application.getString(R.string.nitter_tiekoetter_com_url),
+        application.getString(R.string.nitter_privacyredirect_com_url)
     )
 
     private val _instanceSettings = MutableStateFlow(NitterInstanceSettings())
@@ -44,9 +47,10 @@ class SettingsViewModel(
                 combine(
                     preferencesRepository.darkTheme,
                     preferencesRepository.blockDirectX,
-                    _instanceSettings
-                ) { dark, blockDirectX, instanceSettings -> 
-                    listOf(dark, blockDirectX, instanceSettings) 
+                    _instanceSettings,
+                    preferencesRepository.customInstances
+                ) { dark, blockDirectX, instanceSettings, customInstances -> 
+                    listOf(dark, blockDirectX, instanceSettings, customInstances) 
                 }
             ) { group1, group2 ->
                 val url = group1[0] as String
@@ -58,6 +62,10 @@ class SettingsViewModel(
                 val dark = group2[0] as Boolean?
                 val blockDirectX = group2[1] as Boolean
                 val instanceSettings = group2[2] as NitterInstanceSettings
+                val customInstances = group2[3] as Set<*>
+                
+                val customInstancesList = customInstances.filterIsInstance<String>()
+                val allInstances = availableInstances + customInstancesList
                 
                 SettingsState(
                     instanceUrl = url,
@@ -67,7 +75,8 @@ class SettingsViewModel(
                     isNavLabelsEnabled = showLabels,
                     isBlockDirectXEnabled = blockDirectX,
                     isDarkTheme = dark,
-                    availableInstances = availableInstances,
+                    availableInstances = allInstances,
+                    customInstances = customInstancesList,
                     instanceSettings = instanceSettings,
                     appVersion = _appVersion
                 )
@@ -125,6 +134,22 @@ class SettingsViewModel(
             is SettingsEvent.UpdateInstanceUrl -> {
                 viewModelScope.launch {
                     preferencesRepository.setInstanceUrl(event.url)
+                }
+            }
+            is SettingsEvent.AddCustomInstance -> {
+                viewModelScope.launch {
+                    preferencesRepository.addCustomInstance(event.url)
+                    // Optionally set it as current
+                    preferencesRepository.setInstanceUrl(event.url)
+                }
+            }
+            is SettingsEvent.RemoveCustomInstance -> {
+                viewModelScope.launch {
+                    preferencesRepository.removeCustomInstance(event.url)
+                    // If the current URL is removed, fallback to nitter.net
+                    if (state.value.instanceUrl == event.url) {
+                        preferencesRepository.setInstanceUrl("https://nitter.net")
+                    }
                 }
             }
             is SettingsEvent.UpdateDynamicColor -> {

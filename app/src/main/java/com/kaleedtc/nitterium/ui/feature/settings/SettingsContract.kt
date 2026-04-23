@@ -11,12 +11,15 @@ data class SettingsState(
     val isBlockDirectXEnabled: Boolean = true,
     val isDarkTheme: Boolean? = null, // null = System
     val availableInstances: List<String> = emptyList(),
+    val customInstances: List<String> = emptyList(),
     val instanceSettings: NitterInstanceSettings = NitterInstanceSettings(),
     val appVersion: String = ""
 )
 
 sealed interface SettingsEvent {
     data class UpdateInstanceUrl(val url: String) : SettingsEvent
+    data class AddCustomInstance(val url: String) : SettingsEvent
+    data class RemoveCustomInstance(val url: String) : SettingsEvent
     data class UpdateDynamicColor(val enabled: Boolean) : SettingsEvent
     data class UpdateTrueBlack(val enabled: Boolean) : SettingsEvent
     data class UpdateSiteHeader(val enabled: Boolean) : SettingsEvent
