@@ -1,18 +1,18 @@
 [versions]
-agp = "9.1.1"
+agp = "9.2.0"
 coilCompose = "3.4.0"
-kotlin = "2.3.20"
+kotlin = "2.3.21"
 coreKtx = "1.18.0"
 junit = "4.13.2"
 junitVersion = "1.3.0"
 espressoCore = "3.7.0"
 lifecycleRuntimeKtx = "2.10.0"
 activityCompose = "1.13.0"
-composeBom = "2026.03.01"
+composeBom = "2026.04.01"
 datastore = "1.2.1"
 serialization = "1.11.0"
-navigation = "2.9.7"
-material3 = "1.5.0-alpha17"
+navigation = "2.9.8"
+material3 = "1.5.0-alpha18"
 swiperefreshlayout = "1.2.0"
 
 [libraries]
