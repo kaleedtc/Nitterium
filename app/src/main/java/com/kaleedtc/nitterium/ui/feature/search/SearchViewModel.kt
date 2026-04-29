@@ -39,6 +39,11 @@ class SearchViewModel(
                 setState { copy(isBlockDirectXEnabled = enabled) }
             }
         }
+        viewModelScope.launch {
+            preferencesRepository.useSystemFont.collect { enabled ->
+                setState { copy(useSystemFont = enabled) }
+            }
+        }
     }
 
     fun loadUsername(username: String) {

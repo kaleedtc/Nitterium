@@ -14,6 +14,7 @@ data class SearchState(
     val isTrueBlack: Boolean = false,
     val isSiteHeaderEnabled: Boolean = false,
     val isBlockDirectXEnabled: Boolean = true,
+    val useSystemFont: Boolean = false,
     val showUnsubscribeDialog: Boolean = false,
     val isConnected: Boolean = true
 )

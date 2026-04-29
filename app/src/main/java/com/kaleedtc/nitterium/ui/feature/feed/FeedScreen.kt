@@ -139,6 +139,7 @@ fun FeedContent(
                         isTrueBlack = state.isTrueBlack,
                         isSiteHeaderEnabled = state.isSiteHeaderEnabled,
                         isBlockDirectXEnabled = state.isBlockDirectXEnabled,
+                        useSystemFont = state.useSystemFont,
                         darkTheme = isDarkTheme,
                         isRefreshing = state.isRefreshing,
                         isProfileView = false,

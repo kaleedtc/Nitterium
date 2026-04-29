@@ -37,6 +37,11 @@ class ProfileViewModel(
                 setState { copy(isBlockDirectXEnabled = enabled) }
             }
         }
+        viewModelScope.launch {
+            preferencesRepository.useSystemFont.collect { enabled ->
+                setState { copy(useSystemFont = enabled) }
+            }
+        }
     }
 
     override fun onEvent(event: ProfileEvent) {

@@ -35,6 +35,11 @@ class FeedViewModel(
                 setState { copy(isBlockDirectXEnabled = enabled) }
             }
         }
+        viewModelScope.launch {
+            preferencesRepository.useSystemFont.collect { enabled ->
+                setState { copy(useSystemFont = enabled) }
+            }
+        }
         
         // Observe subscriptions to construct the feed URL
         viewModelScope.launch {

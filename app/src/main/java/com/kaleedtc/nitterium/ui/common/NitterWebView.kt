@@ -50,6 +50,7 @@ fun NitterWebView(
     isTrueBlack: Boolean,
     isSiteHeaderEnabled: Boolean,
     isBlockDirectXEnabled: Boolean,
+    useSystemFont: Boolean,
     darkTheme: Boolean,
     onPageStarted: (String) -> Unit,
     onPageFinished: (String, WebView) -> Unit,
@@ -208,6 +209,14 @@ fun NitterWebView(
         """
     } else ""
 
+    val systemFontCss = if (useSystemFont) {
+        """
+        body, input, button, select, textarea, .tweet-content, .card-title, .card-description, .fullname, .username, .tweet-date, .profile-card-fullname, .profile-card-username, .show-more a, .more-replies a, .tab-item, .nav-item {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+        }
+        """
+    } else ""
+
     fun isProfileUrl(currentUrl: String?): Boolean {
         if (currentUrl.isNullOrEmpty()) return false
         return try {
@@ -275,6 +284,7 @@ fun NitterWebView(
                 updateStyle('app-theme-override', `$currentThemeCss`);
                 updateStyle('true-black-override', `$trueBlackCss`);
                 updateStyle('header-override', `$headerCss`);
+                updateStyle('system-font-override', `$systemFontCss`);
 
                 updateStyle('general-cleanup', `
                     body, .container, .timeline-container { padding-top: 0 !important; margin-top: 0 !important; }
@@ -395,7 +405,7 @@ fun NitterWebView(
 
         // Re-inject theme when it changes to ensure it's always up to date
         // even without a page reload (e.g. when switching system theme).
-        LaunchedEffect(currentThemeCss, trueBlackCss, darkTheme) {
+        LaunchedEffect(currentThemeCss, trueBlackCss, systemFontCss, darkTheme) {
             webViewRef?.let { wv ->
                 wv.evaluateJavascript(latestJsInjection(wv.url), null)
             }

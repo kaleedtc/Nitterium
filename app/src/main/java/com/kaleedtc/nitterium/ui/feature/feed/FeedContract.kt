@@ -10,6 +10,7 @@ data class FeedState(
     val isTrueBlack: Boolean = false,
     val isSiteHeaderEnabled: Boolean = false,
     val isBlockDirectXEnabled: Boolean = true,
+    val useSystemFont: Boolean = false,
 )
 
 sealed interface FeedEvent {
