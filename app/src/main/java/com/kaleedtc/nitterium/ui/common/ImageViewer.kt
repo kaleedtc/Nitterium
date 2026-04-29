@@ -57,6 +57,12 @@ import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.ui.graphics.graphicsLayer
+
 @SuppressLint("LocalContextResourcesRead")
 @Composable
 fun ImageViewer(
@@ -109,12 +115,49 @@ fun ImageViewer(
                 .alpha(alpha)
         ) { page ->
             var isLoading by remember { mutableStateOf(true) }
+            var scale by remember { mutableFloatStateOf(1f) }
+            var imageOffsetX by remember { mutableFloatStateOf(0f) }
+            var imageOffsetY by remember { mutableFloatStateOf(0f) }
 
-            Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            awaitFirstDown()
+                            do {
+                                val event = awaitPointerEvent()
+                                val zoom = event.calculateZoom()
+                                val pan = event.calculatePan()
+                                
+                                scale = (scale * zoom).coerceIn(1f, 5f)
+                                
+                                val maxX = (size.width * (scale - 1)) / 2
+                                val maxY = (size.height * (scale - 1)) / 2
+                                
+                                if (scale > 1f) {
+                                    imageOffsetX = (imageOffsetX + pan.x).coerceIn(-maxX, maxX)
+                                    imageOffsetY = (imageOffsetY + pan.y).coerceIn(-maxY, maxY)
+                                    event.changes.forEach { it.consume() }
+                                } else {
+                                    imageOffsetX = 0f
+                                    imageOffsetY = 0f
+                                }
+                            } while (event.changes.any { it.pressed })
+                        }
+                    }
+            ) {
                 AsyncImage(
                     model = imageUrls[page],
                     contentDescription = "Full screen image",
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer(
+                            scaleX = scale,
+                            scaleY = scale,
+                            translationX = imageOffsetX,
+                            translationY = imageOffsetY
+                        ),
                     contentScale = ContentScale.Fit,
                     onLoading = { isLoading = true },
                     onSuccess = { isLoading = false },
