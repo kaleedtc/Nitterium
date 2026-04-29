@@ -36,21 +36,27 @@ class SettingsViewModel(
         viewModelScope.launch {
             combine(
                 combine(
-                    preferencesRepository.instanceUrl,
-                    preferencesRepository.dynamicColor,
-                    preferencesRepository.trueBlack,
-                    preferencesRepository.enableSiteHeader,
-                    preferencesRepository.showNavLabels
-                ) { url, dynamic, trueBlack, siteHeader, showLabels -> 
-                    listOf(url, dynamic, trueBlack, siteHeader, showLabels) 
-                },
+                    combine(
+                        preferencesRepository.instanceUrl,
+                        preferencesRepository.dynamicColor,
+                        preferencesRepository.trueBlack
+                    ) { a, b, c -> listOf(a, b, c) },
+                    combine(
+                        preferencesRepository.enableSiteHeader,
+                        preferencesRepository.showNavLabels,
+                        preferencesRepository.useSystemFont
+                    ) { a, b, c -> listOf(a, b, c) },
+                    combine(
+                        preferencesRepository.defaultTab,
+                        preferencesRepository.darkTheme,
+                        preferencesRepository.blockDirectX
+                    ) { a, b, c -> listOf(a, b, c) }
+                ) { list1, list2, list3 -> list1 + list2 + list3 },
                 combine(
-                    preferencesRepository.darkTheme,
-                    preferencesRepository.blockDirectX,
                     _instanceSettings,
                     preferencesRepository.customInstances
-                ) { dark, blockDirectX, instanceSettings, customInstances -> 
-                    listOf(dark, blockDirectX, instanceSettings, customInstances) 
+                ) { instanceSettings, customInstances -> 
+                    listOf(instanceSettings, customInstances) 
                 }
             ) { group1, group2 ->
                 val url = group1[0] as String
@@ -58,11 +64,13 @@ class SettingsViewModel(
                 val trueBlack = group1[2] as Boolean
                 val siteHeader = group1[3] as Boolean
                 val showLabels = group1[4] as Boolean
+                val useSystemFont = group1[5] as Boolean
+                val defaultTab = group1[6] as String
                 
-                val dark = group2[0] as Boolean?
-                val blockDirectX = group2[1] as Boolean
-                val instanceSettings = group2[2] as NitterInstanceSettings
-                val customInstances = group2[3] as Set<*>
+                val dark = group1[7] as Boolean?
+                val blockDirectX = group1[8] as Boolean
+                val instanceSettings = group2[0] as NitterInstanceSettings
+                val customInstances = group2[1] as Set<*>
                 
                 val customInstancesList = customInstances.filterIsInstance<String>()
                 val allInstances = availableInstances + customInstancesList
@@ -74,6 +82,8 @@ class SettingsViewModel(
                     isSiteHeaderEnabled = siteHeader,
                     isNavLabelsEnabled = showLabels,
                     isBlockDirectXEnabled = blockDirectX,
+                    useSystemFont = useSystemFont,
+                    defaultTab = defaultTab,
                     isDarkTheme = dark,
                     availableInstances = allInstances,
                     customInstances = customInstancesList,
@@ -170,6 +180,16 @@ class SettingsViewModel(
             is SettingsEvent.UpdateNavLabels -> {
                 viewModelScope.launch {
                     preferencesRepository.setShowNavLabels(event.enabled)
+                }
+            }
+            is SettingsEvent.UpdateSystemFont -> {
+                viewModelScope.launch {
+                    preferencesRepository.setUseSystemFont(event.enabled)
+                }
+            }
+            is SettingsEvent.UpdateDefaultTab -> {
+                viewModelScope.launch {
+                    preferencesRepository.setDefaultTab(event.tab)
                 }
             }
             is SettingsEvent.UpdateBlockDirectX -> {

@@ -9,6 +9,8 @@ data class SettingsState(
     val isSiteHeaderEnabled: Boolean = false,
     val isNavLabelsEnabled: Boolean = true,
     val isBlockDirectXEnabled: Boolean = true,
+    val useSystemFont: Boolean = false,
+    val defaultTab: String = "Search",
     val isDarkTheme: Boolean? = null, // null = System
     val availableInstances: List<String> = emptyList(),
     val customInstances: List<String> = emptyList(),
@@ -25,6 +27,8 @@ sealed interface SettingsEvent {
     data class UpdateSiteHeader(val enabled: Boolean) : SettingsEvent
     data class UpdateNavLabels(val enabled: Boolean) : SettingsEvent
     data class UpdateBlockDirectX(val enabled: Boolean) : SettingsEvent
+    data class UpdateSystemFont(val enabled: Boolean) : SettingsEvent
+    data class UpdateDefaultTab(val tab: String) : SettingsEvent
     data class UpdateDarkTheme(val isDark: Boolean?) : SettingsEvent
     data class UpdateInstanceSetting(val key: String, val value: Boolean) : SettingsEvent
     data class OpenUrl(val url: String) : SettingsEvent

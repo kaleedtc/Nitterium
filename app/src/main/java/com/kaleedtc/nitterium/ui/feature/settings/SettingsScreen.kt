@@ -298,6 +298,59 @@ fun AppSettingsList(
             )
 
             SettingsSwitch(
+                label = stringResource(R.string.use_system_font),
+                checked = state.useSystemFont,
+                onCheckedChange = { onEvent(SettingsEvent.UpdateSystemFont(it)) }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val (tabExpanded, setTabExpanded) = remember { mutableStateOf(false) }
+            val availableTabs = listOf("Search", "Subscriptions", "Feed")
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ExposedDropdownMenuBox(
+                    expanded = tabExpanded,
+                    onExpandedChange = setTabExpanded,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    OutlinedTextField(
+                        value = state.defaultTab,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.default_tab)) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                        singleLine = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = tabExpanded) },
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = tabExpanded,
+                        onDismissRequest = { setTabExpanded(false) }
+                    ) {
+                        availableTabs.forEach { tab ->
+                            DropdownMenuItem(
+                                text = { Text(tab) },
+                                onClick = {
+                                    onEvent(SettingsEvent.UpdateDefaultTab(tab))
+                                    setTabExpanded(false)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            SettingsSwitch(
                 label = stringResource(R.string.block_direct_x),
                 checked = state.isBlockDirectXEnabled,
                 onCheckedChange = { onEvent(SettingsEvent.UpdateBlockDirectX(it)) },

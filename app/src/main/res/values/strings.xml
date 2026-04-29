@@ -53,6 +53,8 @@
     <string name="dynamic_color">Dynamic Color</string>
     <string name="true_black">True Black (OLED)</string>
     <string name="show_nav_labels">Show Navigation Labels</string>
+    <string name="use_system_font">Use System Font</string>
+    <string name="default_tab">Default Tab</string>
     <string name="block_direct_x">Block Direct Connections to X (Twitter)</string>
     <string name="block_direct_x_description">If the chosen Nitter instance has media proxying disabled, turning this off will allow the app to fetch images and videos directly from X servers.</string>
     <string name="theme_mode">Theme Mode</string>

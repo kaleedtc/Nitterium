@@ -36,6 +36,11 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            
+            if (uiState.isLoading) {
+                return@setContent
+            }
+
             val fullScreenMode = remember { mutableStateOf(false) }
 
             // Handle System Bars visibility
@@ -66,7 +71,9 @@ class MainActivity : ComponentActivity() {
                         app = app,
                         isDarkTheme = darkTheme,
                         initialIntentUrl = initialIntentUrl,
-                        showNavLabels = uiState.showNavLabels
+                        showNavLabels = uiState.showNavLabels,
+                        useSystemFont = uiState.useSystemFont,
+                        defaultTab = uiState.defaultTab
                     )
                 }
             }

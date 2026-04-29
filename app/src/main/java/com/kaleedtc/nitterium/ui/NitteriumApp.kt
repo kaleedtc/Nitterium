@@ -66,14 +66,16 @@ fun NitteriumApp(
     app: NitteriumApplication,
     isDarkTheme: Boolean,
     initialIntentUrl: String? = null,
-    showNavLabels: Boolean = true
+    showNavLabels: Boolean = true,
+    useSystemFont: Boolean = false,
+    defaultTab: String = "Search"
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
     val isFullScreen = LocalFullScreenMode.current.value
 
-    val currentTab = rememberSaveable { mutableStateOf("Search") }
+    val currentTab = rememberSaveable { mutableStateOf(defaultTab) }
 
     LaunchedEffect(currentDestination) {
         if (currentDestination?.hierarchy?.any { it.hasRoute<Search>() } == true) {
@@ -200,10 +202,18 @@ fun NitteriumApp(
         }
     ) { innerPadding ->
         val layoutDirection = LocalLayoutDirection.current
+        
+        val startDestination = when (defaultTab) {
+            "Search" -> Search()
+            "Subscriptions" -> Subscriptions
+            "Feed" -> Feed
+            "Settings" -> Settings
+            else -> Search()
+        }
 
         NavHost(
             navController = navController,
-            startDestination = Search(),
+            startDestination = startDestination,
             modifier = Modifier.padding(
                 start = innerPadding.calculateLeftPadding(layoutDirection),
                 end = innerPadding.calculateRightPadding(layoutDirection),
