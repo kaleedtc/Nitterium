@@ -1,0 +1,3 @@
+- Added a new toggle in Settings to use your device's system font.
+- Added "Default Tab" setting to customize your startup experience.
+- Implemented pinch-to-zoom and panning gestures for the Image Viewer.
