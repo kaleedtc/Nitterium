@@ -61,6 +61,11 @@ Nitterium can be downloaded from:
     <img src="./assets/badge_izzyondroid.png" height="150" alt="Get it on IzzyOnDroid"></a>
 </p>
 
+### 🛡️ Verification
+
+To ensure the authenticity of the APK, you can verify its SHA-256 fingerprint:
+`3F:92:8C:35:E5:61:61:A0:63:80:74:9B:BC:F8:02:A6:8D:E6:7D:8D:88:10:0A:B1:79:6E:4E:BE:7B:27:DA:AF`
+
 ---
 
 ## 🔐 PERMISSIONS
