@@ -41,6 +41,7 @@
                 <data android:host="nitter.net" />
                 <data android:host="t.co" />
                 <data android:host="xcancel.com" />
+                <data android:host="rss.xcancel.com" />
                 <data android:host="vxtwitter.com" />
                 <data android:host="fxtwitter.com" />
             </intent-filter>
