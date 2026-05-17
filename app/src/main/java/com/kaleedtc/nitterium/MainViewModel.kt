@@ -26,28 +26,22 @@ class MainViewModel(
         combine(
             preferencesRepository.dynamicColor,
             preferencesRepository.trueBlack,
-            preferencesRepository.darkTheme
-        ) { a, b, c -> listOf(a, b, c) },
-        combine(
+            preferencesRepository.darkTheme,
             preferencesRepository.showNavLabels,
-            preferencesRepository.useSystemFont,
-            preferencesRepository.defaultTab
-        ) { a, b, c -> listOf(a, b, c) }
-    ) { group1, group2 ->
-        val dynamic = group1[0] as Boolean
-        val trueBlack = group1[1] as Boolean
-        val dark = group1[2] as Boolean?
-        val showLabels = group2[0] as Boolean
-        val useSystemFont = group2[1] as Boolean
-        val defaultTab = group2[2] as String
-
-        AppUiState(
+            preferencesRepository.useSystemFont
+        ) { dynamic, trueBlack, dark, showLabels, useSystemFont ->
+            AppUiState(
+                isDynamicColor = dynamic,
+                isTrueBlack = trueBlack,
+                isDarkTheme = dark,
+                showNavLabels = showLabels,
+                useSystemFont = useSystemFont
+            )
+        },
+        preferencesRepository.defaultTab
+    ) { state, defaultTab ->
+        state.copy(
             isLoading = false,
-            isDynamicColor = dynamic,
-            isTrueBlack = trueBlack,
-            isDarkTheme = dark,
-            showNavLabels = showLabels,
-            useSystemFont = useSystemFont,
             defaultTab = defaultTab
         )
     }.stateIn(

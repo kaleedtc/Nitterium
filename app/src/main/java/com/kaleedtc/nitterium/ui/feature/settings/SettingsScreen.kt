@@ -65,6 +65,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kaleedtc.nitterium.R
 import androidx.core.net.toUri
 
+import android.os.Build
+
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel
@@ -279,11 +281,13 @@ fun AppSettingsList(
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            SettingsSwitch(
-                label = stringResource(R.string.dynamic_color),
-                checked = state.isDynamicColor,
-                onCheckedChange = { onEvent(SettingsEvent.UpdateDynamicColor(it)) }
-            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                SettingsSwitch(
+                    label = stringResource(R.string.dynamic_color),
+                    checked = state.isDynamicColor,
+                    onCheckedChange = { onEvent(SettingsEvent.UpdateDynamicColor(it)) }
+                )
+            }
 
             SettingsSwitch(
                 label = stringResource(R.string.true_black),

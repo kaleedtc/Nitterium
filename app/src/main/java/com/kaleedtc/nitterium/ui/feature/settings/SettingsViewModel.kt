@@ -35,46 +35,33 @@ class SettingsViewModel(
     init {
         viewModelScope.launch {
             combine(
-                combine(
-                    combine(
-                        preferencesRepository.instanceUrl,
-                        preferencesRepository.dynamicColor,
-                        preferencesRepository.trueBlack
-                    ) { a, b, c -> listOf(a, b, c) },
-                    combine(
-                        preferencesRepository.enableSiteHeader,
-                        preferencesRepository.showNavLabels,
-                        preferencesRepository.useSystemFont
-                    ) { a, b, c -> listOf(a, b, c) },
-                    combine(
-                        preferencesRepository.defaultTab,
-                        preferencesRepository.darkTheme,
-                        preferencesRepository.blockDirectX
-                    ) { a, b, c -> listOf(a, b, c) }
-                ) { list1, list2, list3 -> list1 + list2 + list3 },
-                combine(
-                    _instanceSettings,
-                    preferencesRepository.customInstances
-                ) { instanceSettings, customInstances -> 
-                    listOf(instanceSettings, customInstances) 
-                }
-            ) { group1, group2 ->
-                val url = group1[0] as String
-                val dynamic = group1[1] as Boolean
-                val trueBlack = group1[2] as Boolean
-                val siteHeader = group1[3] as Boolean
-                val showLabels = group1[4] as Boolean
-                val useSystemFont = group1[5] as Boolean
-                val defaultTab = group1[6] as String
-                
-                val dark = group1[7] as Boolean?
-                val blockDirectX = group1[8] as Boolean
-                val instanceSettings = group2[0] as NitterInstanceSettings
-                val customInstances = group2[1] as Set<*>
-                
-                val customInstancesList = customInstances.filterIsInstance<String>()
-                val allInstances = availableInstances + customInstancesList
-                
+                preferencesRepository.instanceUrl,
+                preferencesRepository.dynamicColor,
+                preferencesRepository.trueBlack,
+                preferencesRepository.enableSiteHeader,
+                preferencesRepository.showNavLabels,
+                preferencesRepository.useSystemFont,
+                preferencesRepository.defaultTab,
+                preferencesRepository.darkTheme,
+                preferencesRepository.blockDirectX,
+                preferencesRepository.customInstances,
+                _instanceSettings
+            ) { args ->
+                val url = args[0] as String
+                val dynamic = args[1] as Boolean
+                val trueBlack = args[2] as Boolean
+                val siteHeader = args[3] as Boolean
+                val showLabels = args[4] as Boolean
+                val useSystemFont = args[5] as Boolean
+                val defaultTab = args[6] as String
+                val dark = args[7] as Boolean?
+                val blockDirectX = args[8] as Boolean
+                @Suppress("UNCHECKED_CAST")
+                val customInstances = (args[9] as Set<String>).toList()
+                val instanceSettings = args[10] as NitterInstanceSettings
+
+                val allInstances = availableInstances + customInstances
+
                 SettingsState(
                     instanceUrl = url,
                     isDynamicColor = dynamic,
@@ -86,7 +73,7 @@ class SettingsViewModel(
                     defaultTab = defaultTab,
                     isDarkTheme = dark,
                     availableInstances = allInstances,
-                    customInstances = customInstancesList,
+                    customInstances = customInstances,
                     instanceSettings = instanceSettings,
                     appVersion = _appVersion
                 )
