@@ -13,6 +13,7 @@ import com.kaleedtc.nitterium.data.ConnectivityMonitor
 import com.kaleedtc.nitterium.data.ConnectivityMonitorImpl
 import com.kaleedtc.nitterium.data.repository.SubscriptionRepository
 import com.kaleedtc.nitterium.data.repository.UserPreferencesRepository
+import com.kaleedtc.nitterium.data.repository.FeedRepository
 import okhttp3.OkHttpClient
 import okio.Path.Companion.toPath
 import java.net.URL
@@ -22,12 +23,14 @@ class NitteriumApplication : Application(), SingletonImageLoader.Factory {
     lateinit var subscriptionRepository: SubscriptionRepository
     lateinit var userPreferencesRepository: UserPreferencesRepository
     lateinit var connectivityMonitor: ConnectivityMonitor
+    lateinit var feedRepository: FeedRepository
 
     override fun onCreate() {
         super.onCreate()
         subscriptionRepository = SubscriptionRepository(this)
         userPreferencesRepository = UserPreferencesRepository(this)
         connectivityMonitor = ConnectivityMonitorImpl(this)
+        feedRepository = FeedRepository()
     }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader {

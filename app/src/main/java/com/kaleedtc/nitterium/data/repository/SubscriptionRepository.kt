@@ -73,6 +73,22 @@ class SubscriptionRepository(context: Context) {
             saveList(newList)
         }
     }
+
+    suspend fun updateSubscriptionAvatar(username: String, avatarUrl: String) {
+        withContext(Dispatchers.IO) {
+            val currentList = _subscriptions.replayCache.firstOrNull() ?: emptyList()
+            val newList = currentList.map {
+                if (it.username.lowercase() == username.lowercase() && it.avatarUrl == null) {
+                    it.copy(avatarUrl = avatarUrl)
+                } else {
+                    it
+                }
+            }
+            if (newList != currentList) {
+                saveList(newList)
+            }
+        }
+    }
     
     fun isSubscribed(username: String): Boolean {
         val currentList = _subscriptions.replayCache.firstOrNull() ?: emptyList()

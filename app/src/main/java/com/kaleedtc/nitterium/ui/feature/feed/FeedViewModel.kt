@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import com.kaleedtc.nitterium.data.ConnectivityMonitor
 import com.kaleedtc.nitterium.data.repository.SubscriptionRepository
 import com.kaleedtc.nitterium.data.repository.UserPreferencesRepository
+import com.kaleedtc.nitterium.data.repository.FeedRepository
 import com.kaleedtc.nitterium.ui.common.MviViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -11,7 +12,8 @@ import kotlinx.coroutines.launch
 class FeedViewModel(
     private val preferencesRepository: UserPreferencesRepository,
     private val subscriptionRepository: SubscriptionRepository,
-    private val connectivityMonitor: ConnectivityMonitor
+    private val connectivityMonitor: ConnectivityMonitor,
+    private val feedRepository: FeedRepository
 ) : MviViewModel<FeedState, FeedEvent, FeedEffect>(FeedState()) {
 
     init {
@@ -41,47 +43,88 @@ class FeedViewModel(
             }
         }
         
-        // Observe subscriptions to construct the feed URL
+        viewModelScope.launch {
+            feedRepository.feedItems.collect { items ->
+                setState { 
+                    copy(
+                        items = items,
+                        isLoading = false,
+                        isRefreshing = false
+                    ) 
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            feedRepository.avatarCache.collect { avatars ->
+                setState { copy(avatars = avatars) }
+            }
+        }
+        
+        // Observe subscriptions to construct the feed
         viewModelScope.launch {
             subscriptionRepository.subscriptions.collect { subscriptions ->
                 if (subscriptions.isEmpty()) {
                     setState { 
                         copy(
                             hasSubscriptions = false, 
-                            currentUrl = "", 
+                            items = emptyList(),
                             isLoading = false, 
                             isError = false
                         ) 
                     }
                 } else {
-                    val instanceUrl = preferencesRepository.instanceUrl.first().trimEnd('/')
-                    val usernames = subscriptions.joinToString(",") { it.username }
-                    val url = "$instanceUrl/$usernames"
+                    setState { copy(hasSubscriptions = true) }
                     
-                    setState { 
-                        copy(
-                            hasSubscriptions = true,
-                            currentUrl = url,
-                            // only trigger loading if we change the URL substantially or first load
-                            isLoading = currentUrl != url && isConnected
-                        ) 
+                    // Update avatar cache with known avatars from subscriptions
+                    subscriptions.forEach { sub ->
+                        sub.avatarUrl?.let { url ->
+                            feedRepository.updateAvatar(sub.username, url)
+                        }
                     }
+                    
+                    fetchFeeds()
+                    discoverMissingAvatars(subscriptions)
                 }
+            }
+        }
+    }
+
+    private fun discoverMissingAvatars(subscriptions: List<com.kaleedtc.nitterium.data.model.Subscription>) {
+        val missing = subscriptions.filter { sub ->
+            sub.avatarUrl == null && !feedRepository.avatarCache.value.containsKey(sub.username.lowercase())
+        }
+        
+        if (missing.isNotEmpty() && state.value.isConnected) {
+            viewModelScope.launch {
+                val instanceUrl = preferencesRepository.instanceUrl.first().trimEnd('/')
+                missing.forEach { sub ->
+                    // Fetch individual feed to discover avatar via RssFeedParser
+                    feedRepository.fetchFeeds(instanceUrl, listOf(sub.username), clearFirst = false)
+                }
+            }
+        }
+    }
+
+    private fun fetchFeeds() {
+        if (!state.value.isConnected) return
+        
+        viewModelScope.launch {
+            setState { copy(isLoading = true, isError = false) }
+            try {
+                val instanceUrl = preferencesRepository.instanceUrl.first().trimEnd('/')
+                val subscriptions = subscriptionRepository.subscriptions.first()
+                val usernames = subscriptions.map { it.username }
+                
+                feedRepository.fetchFeeds(instanceUrl, usernames, clearFirst = true)
+            } catch (_: Exception) {
+                setState { copy(isError = true, isLoading = false, isRefreshing = false) }
             }
         }
     }
 
     override fun onEvent(event: FeedEvent) {
         when (event) {
-            is FeedEvent.OnPageStarted -> {
-                setState { copy(isLoading = true, isError = false) }
-            }
-            is FeedEvent.OnPageFinished -> {
-                setState { copy(isLoading = false, isRefreshing = false) }
-            }
-            is FeedEvent.OnPageError -> {
-                setState { copy(isLoading = false, isRefreshing = false, isError = true) }
-            }
             is FeedEvent.ConnectivityChanged -> {
                 setState { copy(isConnected = event.isConnected) }
                 if (!event.isConnected) {
@@ -93,6 +136,7 @@ class FeedViewModel(
             }
             is FeedEvent.Refresh -> {
                 setState { copy(isRefreshing = state.value.isConnected, isError = false) }
+                fetchFeeds()
             }
             is FeedEvent.ClearError -> setState { copy(isError = false) }
         }
