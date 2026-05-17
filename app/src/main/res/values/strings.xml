@@ -18,6 +18,7 @@
 
     <!-- Feed Screen -->
     <string name="no_subscriptions_feed">You haven\'t subscribed to anyone yet.</string>
+    <string name="retweeted_by">Retweeted by %1$s</string>
 
     <!-- Search Screen -->
     <string name="search_nitter">Search Nitter</string>
@@ -84,6 +85,14 @@
     <string name="app_page">App Page</string>
     <string name="developer_page">Developer Page</string>
     <string name="version">Version %1$s</string>
+
+    <!-- Link Options -->
+    <string name="link_options">Link Options</string>
+    <string name="copy_link">Copy Link</string>
+    <string name="share_link">Share Link</string>
+    <string name="share_content">Share Content</string>
+    <string name="link_copied">Link copied to clipboard</string>
+    <string name="content_extraction_error">Could not extract content</string>
 
     <string name="app_github_url" translatable="false">https://github.com/kaleedtc/Nitterium</string>
     <string name="developer_github_url" translatable="false">https://github.com/kaleedtc</string>

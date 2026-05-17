@@ -278,7 +278,7 @@ fun SearchContent(
                     }
                 }
             }
-        } else {
+        } else if (!state.isLoading) {
             // HOME MODE: Centered welcome content
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -316,7 +316,7 @@ fun SearchContent(
         // 1. We are Home (currentUrl empty) -> Always show (Inactive/Active)
         // 2. OR We are actively searching (isSearchBarActive) -> Show (Active)
         // AND not in full screen
-        if ((state.currentUrl.isEmpty() || state.isSearchBarActive) && !isFullScreen) {
+        if ((state.currentUrl.isEmpty() || state.isSearchBarActive) && !state.isLoading && !isFullScreen) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

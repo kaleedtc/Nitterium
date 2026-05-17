@@ -12,10 +12,13 @@ import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
+import com.kaleedtc.nitterium.data.repository.FeedRepository
+
 class SearchViewModel(
     private val preferencesRepository: UserPreferencesRepository,
     private val subscriptionRepository: SubscriptionRepository,
-    private val connectivityMonitor: ConnectivityMonitor
+    private val connectivityMonitor: ConnectivityMonitor,
+    private val feedRepository: FeedRepository
 ) : MviViewModel<SearchState, SearchEvent, SearchEffect>(SearchState()) {
 
     init {
@@ -93,6 +96,14 @@ class SearchViewModel(
             }
             is SearchEvent.OnAvatarFound -> {
                 setState { copy(avatarUrl = event.url) }
+                // Update Feed cache immediately
+                state.value.currentUsername?.let { username ->
+                    feedRepository.updateAvatar(username, event.url)
+                    // Persist if already subscribed
+                    viewModelScope.launch {
+                        subscriptionRepository.updateSubscriptionAvatar(username, event.url)
+                    }
+                }
             }
             is SearchEvent.ToggleSubscription -> {
                 toggleSubscription(event.username)
@@ -137,6 +148,7 @@ class SearchViewModel(
     }
 
     private fun processDeepLink(deepLinkUrl: String) {
+        setState { copy(isLoading = true) }
         viewModelScope.launch {
             try {
                 val instanceUrl = preferencesRepository.instanceUrl.first()

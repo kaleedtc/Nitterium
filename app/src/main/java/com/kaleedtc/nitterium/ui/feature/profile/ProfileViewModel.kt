@@ -6,6 +6,7 @@ import com.kaleedtc.nitterium.data.model.Subscription
 import com.kaleedtc.nitterium.data.repository.SubscriptionRepository
 import com.kaleedtc.nitterium.data.repository.UserPreferencesRepository
 import com.kaleedtc.nitterium.ui.common.MviViewModel
+import com.kaleedtc.nitterium.data.repository.FeedRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.net.URI
@@ -13,7 +14,8 @@ import java.net.URI
 class ProfileViewModel(
     private val preferencesRepository: UserPreferencesRepository,
     private val subscriptionRepository: SubscriptionRepository,
-    private val connectivityMonitor: ConnectivityMonitor
+    private val connectivityMonitor: ConnectivityMonitor,
+    private val feedRepository: FeedRepository
 ) : MviViewModel<ProfileState, ProfileEvent, ProfileEffect>(ProfileState()) {
 
     init {
@@ -59,6 +61,12 @@ class ProfileViewModel(
             is ProfileEvent.OnPageError -> setState { copy(isLoading = false, isRefreshing = false, isError = true) }
             is ProfileEvent.OnAvatarFound -> {
                 setState { copy(avatarUrl = event.url) }
+                // Update Feed cache immediately
+                feedRepository.updateAvatar(state.value.username, event.url)
+                // Persist if already subscribed
+                viewModelScope.launch {
+                    subscriptionRepository.updateSubscriptionAvatar(state.value.username, event.url)
+                }
             }
             is ProfileEvent.ConnectivityChanged -> {
                 setState { copy(isConnected = event.isConnected) }

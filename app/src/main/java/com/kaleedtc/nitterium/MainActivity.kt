@@ -22,9 +22,13 @@ import com.kaleedtc.nitterium.ui.theme.NitteriumTheme
 
 class MainActivity : ComponentActivity() {
 
+    private val intentUrl = mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        intentUrl.value = intent?.dataString
 
         val app = application as NitteriumApplication
         val viewModel: MainViewModel by viewModels {
@@ -32,7 +36,6 @@ class MainActivity : ComponentActivity() {
                 MainViewModel(app.userPreferencesRepository)
             }
         }
-        val initialIntentUrl = intent?.dataString
 
         setContent {
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -70,13 +73,18 @@ class MainActivity : ComponentActivity() {
                     NitteriumApp(
                         app = app,
                         isDarkTheme = darkTheme,
-                        initialIntentUrl = initialIntentUrl,
+                        initialIntentUrl = intentUrl.value,
+                        onIntentHandled = { intentUrl.value = null },
                         showNavLabels = uiState.showNavLabels,
-                        useSystemFont = uiState.useSystemFont,
                         defaultTab = uiState.defaultTab
                     )
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        intentUrl.value = intent.dataString
     }
 }

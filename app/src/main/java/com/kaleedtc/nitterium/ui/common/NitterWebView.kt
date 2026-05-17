@@ -14,10 +14,22 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -32,7 +44,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import com.kaleedtc.nitterium.R
@@ -43,6 +58,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import java.net.URI
 import java.net.URL
 
+@OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun NitterWebView(
@@ -71,6 +87,9 @@ fun NitterWebView(
     val fullScreenMode = LocalFullScreenMode.current
     var savedScrollX by rememberSaveable { mutableIntStateOf(0) }
     var savedScrollY by rememberSaveable { mutableIntStateOf(0) }
+
+    var longPressedUrl by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
 
     DisposableEffect(Unit) {
         onDispose {
@@ -274,9 +293,12 @@ fun NitterWebView(
                     if (!style) {
                         style = document.createElement('style');
                         style.id = id;
-                        document.head.appendChild(style);
+                        var head = document.head || document.getElementsByTagName('head')[0] || document.documentElement;
+                        if (head) {
+                            head.appendChild(style);
+                        }
                     }
-                    if (style.innerHTML !== css) {
+                    if (style && style.innerHTML !== css) {
                         style.innerHTML = css;
                     }
                 }
@@ -290,6 +312,7 @@ fun NitterWebView(
                     body, .container, .timeline-container { padding-top: 0 !important; margin-top: 0 !important; }
                     .tabs { margin-top: 0 !important; padding-top: 0 !important; }
                     .timeline { margin-top: 0 !important; border-top: none !important; border-radius: 0 !important; }
+                    .tweet-published { display: none !important; }
                 `);
 
                 function fixDirection() {
@@ -315,11 +338,11 @@ fun NitterWebView(
                 }
 
                 if ($darkTheme) {
-                    document.body.classList.add('dark');
-                    document.documentElement.style.colorScheme = 'dark';
+                    if (document.body) document.body.classList.add('dark');
+                    if (document.documentElement) document.documentElement.style.colorScheme = 'dark';
                 } else {
-                    document.body.classList.remove('dark', 'h-dark');
-                    document.documentElement.style.colorScheme = 'light';
+                    if (document.body) document.body.classList.remove('dark', 'h-dark');
+                    if (document.documentElement) document.documentElement.style.colorScheme = 'light';
                 }
 
                 if (!window.nitterImageListenerAttached) {
@@ -365,8 +388,25 @@ fun NitterWebView(
                     window.nitterImageListenerAttached = true;
                 }
 
+                if (!window.nitterContextMenuListenerAttached) {
+                    document.addEventListener('contextmenu', function(e) {
+                        var target = e.target;
+                        while (target && target.tagName !== 'A') {
+                            target = target.parentElement;
+                        }
+                        if (target && target.tagName === 'A' && target.href) {
+                            if (window.NitterAndroid && NitterAndroid.handleLongPress) {
+                                NitterAndroid.handleLongPress(target.href);
+                            }
+                        }
+                    }, true);
+                    window.nitterContextMenuListenerAttached = true;
+                }
+
                 fixDirection();
-                new MutationObserver(fixDirection).observe(document.body, { childList: true, subtree: true });
+                if (document.body) {
+                    new MutationObserver(fixDirection).observe(document.body, { childList: true, subtree: true });
+                }
             })()
         """.trimIndent()
     }
@@ -476,9 +516,30 @@ fun NitterWebView(
                         domStorageEnabled = true
                     }
 
-                    addJavascriptInterface(NitterInterface { urls, index ->
-                        clickedImageState = Pair(urls, index)
-                    }, "NitterAndroid")
+                    addJavascriptInterface(NitterInterface(
+                        onOpenGallery = { urls, index ->
+                            clickedImageState = Pair(urls, index)
+                        },
+                        onLongPress = { longPressedUrl = it }
+                    ), "NitterAndroid")
+
+                    setOnLongClickListener { v ->
+                        val result = (v as WebView).hitTestResult
+                        if (result.type == WebView.HitTestResult.SRC_ANCHOR_TYPE || result.type == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE) {
+                            val urlResult = result.extra
+                            if (!urlResult.isNullOrEmpty()) {
+                                val finalUrl = try {
+                                    val baseUri = URI(v.url ?: url)
+                                    baseUri.resolve(urlResult).toString()
+                                } catch (_: Exception) {
+                                    urlResult
+                                }
+                                longPressedUrl = finalUrl
+                                return@setOnLongClickListener true
+                            }
+                        }
+                        false
+                    }
 
                     webViewClient = object : WebViewClient() {
                         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
@@ -680,10 +741,112 @@ fun NitterWebView(
                 onDismiss = { clickedImageState = null }
             )
         }
+
+        // Link Options Dialog
+        longPressedUrl?.let { urlToCopy ->
+            val linkCopiedMsg = stringResource(R.string.link_copied)
+            val shareLinkTitle = stringResource(R.string.share_link)
+            val shareContentStr = stringResource(R.string.share_content)
+            val contentExtErrStr = stringResource(R.string.content_extraction_error)
+            val isTweetUrl = urlToCopy.contains("/status/")
+            val sheetState = rememberModalBottomSheetState()
+
+            ModalBottomSheet(
+                onDismissRequest = { longPressedUrl = null },
+                sheetState = sheetState
+            ) {
+                androidx.compose.foundation.layout.Column(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                ) {
+                    Box(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = urlToCopy,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    androidx.compose.material3.HorizontalDivider()
+                    
+                    if (isTweetUrl) {
+                        ListItem(
+                            headlineContent = { Text(shareContentStr) },
+                            modifier = Modifier.clickable {
+                                val jsCode = """
+                                    (function() {
+                                        var links = document.querySelectorAll('a');
+                                        for (var i = 0; i < links.length; i++) {
+                                            if (links[i].href && links[i].href.includes('$urlToCopy')) {
+                                                var tweetItem = links[i].closest('.timeline-item, .main-thread, .reply');
+                                                if (tweetItem) {
+                                                    var contentEl = tweetItem.querySelector('.tweet-content');
+                                                    if (contentEl) return contentEl.innerText;
+                                                }
+                                            }
+                                        }
+                                        return '';
+                                    })()
+                                """.trimIndent()
+                                webViewRef?.evaluateJavascript(jsCode) { result ->
+                                    try {
+                                        val extractedText = org.json.JSONObject("{\"t\":$result}").getString("t")
+                                        if (extractedText.isNotEmpty()) {
+                                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                                type = "text/plain"
+                                                putExtra(Intent.EXTRA_TEXT, extractedText)
+                                            }
+                                            context.startActivity(Intent.createChooser(intent, shareContentStr))
+                                        } else {
+                                            Toast.makeText(context, contentExtErrStr, Toast.LENGTH_SHORT).show()
+                                        }
+                                    } catch (_: Exception) {
+                                        Toast.makeText(context, contentExtErrStr, Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                                longPressedUrl = null
+                            }
+                        )
+                    }
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.share_link)) },
+                        modifier = Modifier.clickable {
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, urlToCopy)
+                            }
+                            context.startActivity(Intent.createChooser(intent, shareLinkTitle))
+                            longPressedUrl = null
+                        }
+                    )
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.copy_link)) },
+                        modifier = Modifier.clickable {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clip = ClipData.newPlainText("Copied Link", urlToCopy)
+                            clipboard.setPrimaryClip(clip)
+                            Toast.makeText(context, linkCopiedMsg, Toast.LENGTH_SHORT).show()
+                            longPressedUrl = null
+                        }
+                    )
+                }
+            }
+        }
     }
 }
 
-class NitterInterface(private val onOpenGallery: (List<String>, Int) -> Unit) {
+class NitterInterface(
+    private val onOpenGallery: (List<String>, Int) -> Unit,
+    private val onLongPress: (String) -> Unit
+) {
+    @Suppress("unused")
+    @JavascriptInterface
+    fun handleLongPress(url: String) {
+        onLongPress(url)
+    }
+
     @Suppress("unused")
     @JavascriptInterface
     fun openGallery(urlsJson: String, initialIndex: Int) {

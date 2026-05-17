@@ -66,8 +66,8 @@ fun NitteriumApp(
     app: NitteriumApplication,
     isDarkTheme: Boolean,
     initialIntentUrl: String? = null,
+    onIntentHandled: () -> Unit = {},
     showNavLabels: Boolean = true,
-    useSystemFont: Boolean = false,
     defaultTab: String = "Search"
 ) {
     val navController = rememberNavController()
@@ -76,6 +76,20 @@ fun NitteriumApp(
     val isFullScreen = LocalFullScreenMode.current.value
 
     val currentTab = rememberSaveable { mutableStateOf(defaultTab) }
+
+    // Handle deep links by navigating to Search tab
+    LaunchedEffect(initialIntentUrl) {
+        if (initialIntentUrl != null) {
+            currentTab.value = "Search"
+            navController.navigate(Search()) {
+                popUpTo(navController.graph.findStartDestination().id) {
+                    saveState = true
+                }
+                launchSingleTop = true
+                restoreState = true
+            }
+        }
+    }
 
     LaunchedEffect(currentDestination) {
         if (currentDestination?.hierarchy?.any { it.hasRoute<Search>() } == true) {
@@ -93,8 +107,6 @@ fun NitteriumApp(
     val isFeedFlow = currentTab.value == "Feed"
     val isSettingsFlow = currentTab.value == "Settings"
     val isSearchFlow = currentTab.value == "Search"
-
-    var deepLinkHandled by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -231,20 +243,23 @@ fun NitteriumApp(
                         SearchViewModel(
                             app.userPreferencesRepository,
                             app.subscriptionRepository,
-                            app.connectivityMonitor
+                            app.connectivityMonitor,
+                            app.feedRepository
                         )
                     }
                 )
 
-                val deepLinkToPass =
-                    if (!deepLinkHandled && initialIntentUrl != null) initialIntentUrl else null
-
                 SearchScreen(
-                    deepLinkUrl = deepLinkToPass,
+                    deepLinkUrl = initialIntentUrl,
                     isDarkTheme = isDarkTheme,
                     viewModel = viewModel
                 )
 
+                if (initialIntentUrl != null) {
+                    LaunchedEffect(initialIntentUrl) {
+                        onIntentHandled()
+                    }
+                }
             }
 
             composable<Profile> { backStackEntry ->
@@ -254,7 +269,8 @@ fun NitteriumApp(
                         ProfileViewModel(
                             app.userPreferencesRepository,
                             app.subscriptionRepository,
-                            app.connectivityMonitor
+                            app.connectivityMonitor,
+                            app.feedRepository
                         )
                     }
                 )
@@ -286,12 +302,12 @@ fun NitteriumApp(
                         FeedViewModel(
                             app.userPreferencesRepository,
                             app.subscriptionRepository,
-                            app.connectivityMonitor
+                            app.connectivityMonitor,
+                            app.feedRepository
                         )
                     }
                 )
                 FeedScreen(
-                    isDarkTheme = isDarkTheme,
                     viewModel = viewModel
                 )
             }
