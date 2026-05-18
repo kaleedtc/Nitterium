@@ -8,7 +8,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 class SubscriptionsViewModel(
-    private val subscriptionRepository: SubscriptionRepository
+    private val subscriptionRepository: SubscriptionRepository,
+    groupRepository: com.kaleedtc.nitterium.data.repository.FeedGroupRepository
 ) : MviViewModel<SubscriptionsState, SubscriptionsEvent, SubscriptionsEffect>(SubscriptionsState()) {
 
     init {
@@ -17,10 +18,21 @@ class SubscriptionsViewModel(
                 setState { copy(subscriptions = subs) }
             }
             .launchIn(viewModelScope)
+
+        groupRepository.groups
+            .onEach { groups ->
+                setState { copy(groups = groups) }
+            }
+            .launchIn(viewModelScope)
     }
 
     override fun onEvent(event: SubscriptionsEvent) {
         when (event) {
+            is SubscriptionsEvent.UpdateSubscriptionGroups -> {
+                viewModelScope.launch {
+                    subscriptionRepository.updateSubscriptionGroups(event.username, event.groupIds)
+                }
+            }
             is SubscriptionsEvent.RequestDelete -> {
                 setState { copy(subscriptionToDelete = event.subscription) }
             }

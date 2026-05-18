@@ -1,10 +1,9 @@
 package com.kaleedtc.nitterium.ui.feature.feed
 
-import com.kaleedtc.nitterium.data.model.FeedItem
-
 data class FeedState(
-    val items: List<FeedItem> = emptyList(),
-    val avatars: Map<String, String> = emptyMap(),
+    val currentUrl: String = "",
+    val groupId: String? = null,
+    val groupName: String? = null,
     val isLoading: Boolean = false,
     val isError: Boolean = false,
     val isRefreshing: Boolean = false,
@@ -12,11 +11,13 @@ data class FeedState(
     val hasSubscriptions: Boolean = true,
     val isTrueBlack: Boolean = false,
     val isSiteHeaderEnabled: Boolean = false,
-    val isBlockDirectXEnabled: Boolean = true,
-    val useSystemFont: Boolean = false,
+    val isBlockDirectXEnabled: Boolean = true
 )
 
 sealed interface FeedEvent {
+    data class OnPageStarted(val url: String) : FeedEvent
+    data class OnPageFinished(val url: String) : FeedEvent
+    object OnPageError : FeedEvent
     data class ConnectivityChanged(val isConnected: Boolean) : FeedEvent
     object Refresh : FeedEvent
     object ClearError : FeedEvent

@@ -15,4 +15,7 @@ object Subscriptions
 object Feed
 
 @Serializable
+data class FeedGroupDetails(val groupId: String, val groupName: String)
+
+@Serializable
 object Settings

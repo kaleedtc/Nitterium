@@ -56,6 +56,7 @@ fun ProfileScreen(
     username: String,
     isDarkTheme: Boolean,
     onNavigateBack: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     viewModel: ProfileViewModel
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -79,7 +80,8 @@ fun ProfileScreen(
         isDarkTheme = isDarkTheme,
         onEvent = viewModel::onEvent,
         snackbarHostState = snackbarHostState,
-        onNavigateBack = onNavigateBack
+        onNavigateBack = onNavigateBack,
+        onNavigateToSettings = onNavigateToSettings
     )
 }
 
@@ -91,7 +93,8 @@ fun ProfileContent(
     isDarkTheme: Boolean,
     onEvent: (ProfileEvent) -> Unit,
     snackbarHostState: SnackbarHostState,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToSettings: () -> Unit
 ) {
     var webView: WebView? by remember { mutableStateOf(null) }
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
@@ -176,17 +179,15 @@ fun ProfileContent(
                         message = stringResource(R.string.failed_to_load_profile),
                         onRetry = {
                             onEvent(ProfileEvent.Refresh)
-                        }
+                        },
+                        onSwitchInstance = onNavigateToSettings
                     )
                 } else {
                     NitterWebView(
-
-
                         url = state.currentUrl,
                         isTrueBlack = state.isTrueBlack,
                         isSiteHeaderEnabled = state.isSiteHeaderEnabled,
                         isBlockDirectXEnabled = state.isBlockDirectXEnabled,
-                        useSystemFont = state.useSystemFont,
                         darkTheme = isDarkTheme,
                         isRefreshing = state.isRefreshing,
                         isProfileView = true,
@@ -241,4 +242,4 @@ fun ProfileContent(
             )
         }
     }
-    }
+}

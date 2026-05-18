@@ -5,6 +5,7 @@ import com.kaleedtc.nitterium.data.model.Subscription
 
 data class SubscriptionsState(
     val subscriptions: List<Subscription> = emptyList(),
+    val groups: List<com.kaleedtc.nitterium.data.model.FeedGroup> = emptyList(),
     val isRefreshing: Boolean = false,
     val subscriptionToDelete: Subscription? = null
 )
@@ -20,6 +21,7 @@ sealed interface SubscriptionsEvent {
     data class SubscriptionsImported(val uri: Uri?) : SubscriptionsEvent
     data class ReorderSubscriptions(val fromIndex: Int, val toIndex: Int) : SubscriptionsEvent
     data object SaveSubscriptionOrder : SubscriptionsEvent
+    data class UpdateSubscriptionGroups(val username: String, val groupIds: List<String>) : SubscriptionsEvent
 }
 
 sealed interface SubscriptionsEffect {

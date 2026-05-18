@@ -13,7 +13,6 @@ import com.kaleedtc.nitterium.data.ConnectivityMonitor
 import com.kaleedtc.nitterium.data.ConnectivityMonitorImpl
 import com.kaleedtc.nitterium.data.repository.SubscriptionRepository
 import com.kaleedtc.nitterium.data.repository.UserPreferencesRepository
-import com.kaleedtc.nitterium.data.repository.FeedRepository
 import okhttp3.OkHttpClient
 import okio.Path.Companion.toPath
 import java.net.URL
@@ -22,39 +21,40 @@ class NitteriumApplication : Application(), SingletonImageLoader.Factory {
 
     lateinit var subscriptionRepository: SubscriptionRepository
     lateinit var userPreferencesRepository: UserPreferencesRepository
+    lateinit var feedGroupRepository: com.kaleedtc.nitterium.data.repository.FeedGroupRepository
     lateinit var connectivityMonitor: ConnectivityMonitor
-    lateinit var feedRepository: FeedRepository
 
     override fun onCreate() {
         super.onCreate()
         subscriptionRepository = SubscriptionRepository(this)
         userPreferencesRepository = UserPreferencesRepository(this)
+        feedGroupRepository = com.kaleedtc.nitterium.data.repository.FeedGroupRepository(this)
         connectivityMonitor = ConnectivityMonitorImpl(this)
-        feedRepository = FeedRepository()
     }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader {
         val cookieManager = CookieManager.getInstance()
         val defaultUserAgent = WebSettings.getDefaultUserAgent(context)
+        val strippedUserAgent = defaultUserAgent.replace("; wv", "")
+            .replace(Regex("Version/\\d+\\.\\d+\\s+"), "")
 
         val okHttpClient = OkHttpClient.Builder()
             .addInterceptor { chain ->
                 val originalRequest = chain.request()
                 val urlString = originalRequest.url.toString()
                 val cookies = cookieManager.getCookie(urlString)
-                
+
                 val host = try {
                     val url = URL(urlString)
                     "${url.protocol}://${url.host}/"
                 } catch (_: Exception) {
                     ""
                 }
-                
+
                 val requestBuilder = originalRequest.newBuilder()
-                    .header("User-Agent", defaultUserAgent)
+                    .header("User-Agent", strippedUserAgent)
                     .header("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
                     .header("Accept-Language", "en-US,en;q=0.9")
-                    
                 if (host.isNotEmpty()) {
                     requestBuilder.header("Referer", host)
                 }

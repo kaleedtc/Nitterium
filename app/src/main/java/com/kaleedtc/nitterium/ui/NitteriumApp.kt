@@ -25,7 +25,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
@@ -55,6 +54,9 @@ import com.kaleedtc.nitterium.ui.navigation.Subscriptions
 import com.kaleedtc.nitterium.ui.navigation.Feed
 import com.kaleedtc.nitterium.ui.feature.feed.FeedScreen
 import com.kaleedtc.nitterium.ui.feature.feed.FeedViewModel
+import com.kaleedtc.nitterium.ui.feature.groups.FeedGroupsScreen
+import com.kaleedtc.nitterium.ui.feature.groups.FeedGroupsViewModel
+import com.kaleedtc.nitterium.ui.navigation.FeedGroupDetails
 
 import com.kaleedtc.nitterium.ui.common.LocalFullScreenMode
 
@@ -243,8 +245,7 @@ fun NitteriumApp(
                         SearchViewModel(
                             app.userPreferencesRepository,
                             app.subscriptionRepository,
-                            app.connectivityMonitor,
-                            app.feedRepository
+                            app.connectivityMonitor
                         )
                     }
                 )
@@ -252,6 +253,16 @@ fun NitteriumApp(
                 SearchScreen(
                     deepLinkUrl = initialIntentUrl,
                     isDarkTheme = isDarkTheme,
+                    onNavigateToSettings = {
+                        currentTab.value = "Settings"
+                        navController.navigate(Settings) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
                     viewModel = viewModel
                 )
 
@@ -269,8 +280,7 @@ fun NitteriumApp(
                         ProfileViewModel(
                             app.userPreferencesRepository,
                             app.subscriptionRepository,
-                            app.connectivityMonitor,
-                            app.feedRepository
+                            app.connectivityMonitor
                         )
                     }
                 )
@@ -279,6 +289,16 @@ fun NitteriumApp(
                     username = profile.username,
                     isDarkTheme = isDarkTheme,
                     onNavigateBack = { navController.popBackStack() },
+                    onNavigateToSettings = {
+                        currentTab.value = "Settings"
+                        navController.navigate(Settings) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
                     viewModel = viewModel
                 )
             }
@@ -286,7 +306,10 @@ fun NitteriumApp(
             composable<Subscriptions> {
                 val viewModel: SubscriptionsViewModel = viewModel(
                     factory = viewModelFactory {
-                        SubscriptionsViewModel(app.subscriptionRepository)
+                        SubscriptionsViewModel(
+                            app.subscriptionRepository,
+                            app.feedGroupRepository
+                        )
                     }
                 )
                 SubscriptionsScreen(
@@ -297,17 +320,54 @@ fun NitteriumApp(
                 )
             }
             composable<Feed> {
+                val viewModel: FeedGroupsViewModel = viewModel(
+                    factory = viewModelFactory {
+                        FeedGroupsViewModel(
+                            app.feedGroupRepository,
+                            app.subscriptionRepository
+                        )
+                    }
+                )
+                FeedGroupsScreen(
+                    viewModel = viewModel,
+                    onNavigateToGroup = { id, name ->
+                        navController.navigate(FeedGroupDetails(id, name))
+                    },
+                    onNavigateToAll = {
+                        navController.navigate(FeedGroupDetails("all", "All"))
+                    }
+                )
+            }
+            composable<FeedGroupDetails> { backStackEntry ->
+                val details: FeedGroupDetails = backStackEntry.toRoute()
                 val viewModel: FeedViewModel = viewModel(
                     factory = viewModelFactory {
                         FeedViewModel(
                             app.userPreferencesRepository,
                             app.subscriptionRepository,
-                            app.connectivityMonitor,
-                            app.feedRepository
-                        )
+                            app.connectivityMonitor
+                        ).apply {
+                            if (details.groupId != "all") {
+                                setGroup(details.groupId, details.groupName)
+                            } else {
+                                setGroup(null, "All")
+                            }
+                        }
                     }
                 )
                 FeedScreen(
+                    isDarkTheme = isDarkTheme,
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToSettings = {
+                        currentTab.value = "Settings"
+                        navController.navigate(Settings) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
                     viewModel = viewModel
                 )
             }

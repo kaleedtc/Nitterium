@@ -7,5 +7,6 @@ data class Subscription(
     val username: String,
     val instanceUrl: String,
     val avatarUrl: String? = null,
-    val addedAt: Long = System.currentTimeMillis()
+    val addedAt: Long = System.currentTimeMillis(),
+    val groupIds: List<String> = emptyList()
 )

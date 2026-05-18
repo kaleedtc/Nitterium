@@ -25,7 +25,7 @@
     <string name="search_hint">Type a query or @username above</string>
     <string name="search_placeholder">Search tweets or @user</string>
     <string name="search_for">Search for \"%1$s\"</string>
-    <string name="failed_to_load_content">Failed to load content</string>
+    <string name="failed_to_load_content">Failed to load content. Try another instance if this persists.</string>
     <string name="no_internet">No Internet Connection</string>
     <string name="no_internet_description">Connect to the Internet first.</string>
     <string name="subscribe">Subscribe</string>
@@ -42,8 +42,21 @@
     <string name="export_label">Export</string>
 
     <!-- Profile Screen -->
-    <string name="failed_to_load_profile">Failed to load profile</string>
+    <string name="failed_to_load_profile">Failed to load profile. This instance might be temporarily blocked or down.</string>
     <string name="renderer_gone_error">Renderer process has crashed</string>
+
+    <string name="switch_instance">Switch Instance</string>
+
+    <!-- Groups Section -->
+    <string name="groups">Groups</string>
+    <string name="add_group">Add Group</string>
+    <string name="edit_group">Edit Group</string>
+    <string name="group_name">Group Name</string>
+    <string name="select_icon">Select Icon</string>
+    <string name="select_color">Select Color</string>
+    <string name="all">All</string>
+    <string name="assign_to_groups">Assign to Groups</string>
+    <string name="no_groups_created">No groups created yet. Go to Feed to create one!</string>
 
     <!-- Settings Screen -->
     <string name="app_settings">App Settings</string>
@@ -54,7 +67,6 @@
     <string name="dynamic_color">Dynamic Color</string>
     <string name="true_black">True Black (OLED)</string>
     <string name="show_nav_labels">Show Navigation Labels</string>
-    <string name="use_system_font">Use System Font</string>
     <string name="default_tab">Default Tab</string>
     <string name="block_direct_x">Block Direct Connections to X (Twitter)</string>
     <string name="block_direct_x_description">If the chosen Nitter instance has media proxying disabled, turning this off will allow the app to fetch images and videos directly from X servers.</string>

@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -23,7 +25,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -121,6 +125,19 @@ fun SubscriptionsContent(
         )
 
     var showMenu by remember { mutableStateOf(false) }
+    var subForGroups by remember { mutableStateOf<Subscription?>(null) }
+
+    if (subForGroups != null) {
+        GroupAssignmentDialog(
+            subscription = subForGroups!!,
+            allGroups = state.groups,
+            onDismiss = { subForGroups = null },
+            onConfirm = { groupIds ->
+                onEvent(SubscriptionsEvent.UpdateSubscriptionGroups(subForGroups!!.username, groupIds))
+                subForGroups = null
+            }
+        )
+    }
 
     val listState = rememberLazyListState()
     var draggingItemKey by remember { mutableStateOf<Any?>(null) }
@@ -288,7 +305,8 @@ fun SubscriptionsContent(
                         subscription = sub,
                         modifier = modifier,
                         onClick = { onNavigateToUser(sub.username) },
-                        onDelete = { onEvent(SubscriptionsEvent.RequestDelete(sub)) }
+                        onDelete = { onEvent(SubscriptionsEvent.RequestDelete(sub)) },
+                        onManageGroups = { subForGroups = sub }
                     )
                 }
             }
@@ -297,11 +315,67 @@ fun SubscriptionsContent(
 }
 
 @Composable
+fun GroupAssignmentDialog(
+    subscription: Subscription,
+    allGroups: List<com.kaleedtc.nitterium.data.model.FeedGroup>,
+    onDismiss: () -> Unit,
+    onConfirm: (List<String>) -> Unit
+) {
+    var selectedGroupIds by remember { mutableStateOf(subscription.groupIds) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.assign_to_groups)) },
+        text = {
+            if (allGroups.isEmpty()) {
+                Text(stringResource(R.string.no_groups_created))
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(allGroups) { group ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedGroupIds = if (selectedGroupIds.contains(group.id)) {
+                                        selectedGroupIds - group.id
+                                    } else {
+                                        selectedGroupIds + group.id
+                                    }
+                                }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = selectedGroupIds.contains(group.id),
+                                onCheckedChange = null
+                            )
+                            Spacer(modifier = Modifier.size(8.dp))
+                            Text(group.name)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(selectedGroupIds) }) {
+                Text(stringResource(R.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
 fun SubscriptionItem(
     subscription: Subscription,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onManageGroups: () -> Unit
 ) {
     Row(
         modifier = modifier
@@ -338,6 +412,14 @@ fun SubscriptionItem(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
+
+        IconButton(onClick = onManageGroups) {
+            Icon(
+                imageVector = Icons.Default.FolderOpen,
+                contentDescription = stringResource(R.string.groups),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
 
         IconButton(onClick = onDelete) {
             Icon(
