@@ -14,7 +14,6 @@ data class AppUiState(
     val isTrueBlack: Boolean = false,
     val isDarkTheme: Boolean? = null,
     val showNavLabels: Boolean = true,
-    val useSystemFont: Boolean = false,
     val defaultTab: String = "Search"
 )
 
@@ -27,15 +26,13 @@ class MainViewModel(
             preferencesRepository.dynamicColor,
             preferencesRepository.trueBlack,
             preferencesRepository.darkTheme,
-            preferencesRepository.showNavLabels,
-            preferencesRepository.useSystemFont
-        ) { dynamic, trueBlack, dark, showLabels, useSystemFont ->
+            preferencesRepository.showNavLabels
+        ) { dynamic, trueBlack, dark, showLabels ->
             AppUiState(
                 isDynamicColor = dynamic,
                 isTrueBlack = trueBlack,
                 isDarkTheme = dark,
-                showNavLabels = showLabels,
-                useSystemFont = useSystemFont
+                showNavLabels = showLabels
             )
         },
         preferencesRepository.defaultTab

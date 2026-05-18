@@ -66,7 +66,6 @@ fun NitterWebView(
     isTrueBlack: Boolean,
     isSiteHeaderEnabled: Boolean,
     isBlockDirectXEnabled: Boolean,
-    useSystemFont: Boolean,
     darkTheme: Boolean,
     onPageStarted: (String) -> Unit,
     onPageFinished: (String, WebView) -> Unit,
@@ -228,14 +227,6 @@ fun NitterWebView(
         """
     } else ""
 
-    val systemFontCss = if (useSystemFont) {
-        """
-        body, input, button, select, textarea, .tweet-content, .card-title, .card-description, .fullname, .username, .tweet-date, .profile-card-fullname, .profile-card-username, .show-more a, .more-replies a, .tab-item, .nav-item {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
-        }
-        """
-    } else ""
-
     fun isProfileUrl(currentUrl: String?): Boolean {
         if (currentUrl.isNullOrEmpty()) return false
         return try {
@@ -306,7 +297,6 @@ fun NitterWebView(
                 updateStyle('app-theme-override', `$currentThemeCss`);
                 updateStyle('true-black-override', `$trueBlackCss`);
                 updateStyle('header-override', `$headerCss`);
-                updateStyle('system-font-override', `$systemFontCss`);
 
                 updateStyle('general-cleanup', `
                     body, .container, .timeline-container { padding-top: 0 !important; margin-top: 0 !important; }
@@ -445,7 +435,7 @@ fun NitterWebView(
 
         // Re-inject theme when it changes to ensure it's always up to date
         // even without a page reload (e.g. when switching system theme).
-        LaunchedEffect(currentThemeCss, trueBlackCss, systemFontCss, darkTheme) {
+        LaunchedEffect(currentThemeCss, trueBlackCss, darkTheme) {
             webViewRef?.let { wv ->
                 wv.evaluateJavascript(latestJsInjection(wv.url), null)
             }
@@ -514,7 +504,16 @@ fun NitterWebView(
                     settings.apply {
                         javaScriptEnabled = true
                         domStorageEnabled = true
+                        cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
+                        mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                        val defaultUA = userAgentString
+                        userAgentString = defaultUA.replace("; wv", "")
+                            .replace(Regex("Version/\\d+\\.\\d+\\s+"), "")
                     }
+
+                    // Enable third party cookies for better instance compatibility
+                    val cookieManager = CookieManager.getInstance()
+                    cookieManager.setAcceptThirdPartyCookies(this, true)
 
                     addJavascriptInterface(NitterInterface(
                         onOpenGallery = { urls, index ->
@@ -562,12 +561,9 @@ fun NitterWebView(
                             view: WebView?,
                             detail: android.webkit.RenderProcessGoneDetail?
                         ): Boolean {
-                            // Handle the renderer crash gracefully
                             if (view != null) {
                                 latestOnPageError(-1, rendererGoneError)
                             }
-                            // Returning true prevents the app from crashing.
-                            // The UI will show the error screen based on latestOnPageError call.
                             return true
                         }
 
@@ -585,7 +581,45 @@ fun NitterWebView(
                             }
                         }
 
+                        override fun onReceivedHttpError(
+                            view: WebView?,
+                            request: WebResourceRequest?,
+                            errorResponse: WebResourceResponse?
+                        ) {
+                            super.onReceivedHttpError(view, request, errorResponse)
+                            if (request?.isForMainFrame == true) {
+                                latestOnPageError(
+                                    errorResponse?.statusCode ?: 0,
+                                    errorResponse?.reasonPhrase ?: "HTTP Error"
+                                )
+                            }
+                        }
+
+                        override fun onReceivedSslError(
+                            view: WebView?,
+                            handler: android.webkit.SslErrorHandler?,
+                            error: android.net.http.SslError?
+                        ) {
+                            // User privacy is first: do not proceed on SSL errors.
+                            // Cancel the connection and trigger an error state.
+                            handler?.cancel()
+                            
+                            val errorMessage = error?.let {
+                                when (it.primaryError) {
+                                    android.net.http.SslError.SSL_EXPIRED -> "SSL Certificate Expired"
+                                    android.net.http.SslError.SSL_IDMISMATCH -> "SSL Hostname Mismatch"
+                                    android.net.http.SslError.SSL_UNTRUSTED -> "SSL Certificate Untrusted"
+                                    android.net.http.SslError.SSL_DATE_INVALID -> "SSL Date Invalid"
+                                    android.net.http.SslError.SSL_NOTYETVALID -> "SSL Certificate Not Yet Valid"
+                                    else -> "SSL Error"
+                                }
+                            } ?: "Unknown SSL Error"
+                            
+                            latestOnPageError(-3, errorMessage)
+                        }
+
                         override fun shouldInterceptRequest(
+
                             view: WebView?,
                             request: WebResourceRequest?
                         ): WebResourceResponse? {
@@ -679,6 +713,15 @@ fun NitterWebView(
                 if (!webViewStateBundle.isEmpty) {
                     webView.restoreState(webViewStateBundle)
                 } else if (url.isNotEmpty()) {
+                    val cookieManager = CookieManager.getInstance()
+                    cookieManager.setAcceptCookie(true)
+                    try {
+                        cookieManager.setCookie(
+                            url,
+                            "theme=$nitterThemeCookieValue; Path=/; SameSite=Lax"
+                        )
+                        cookieManager.flush()
+                    } catch (_: Exception) {}
                     webView.loadUrl(url)
                 }
 

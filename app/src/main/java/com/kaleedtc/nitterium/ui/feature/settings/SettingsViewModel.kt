@@ -40,7 +40,6 @@ class SettingsViewModel(
                 preferencesRepository.trueBlack,
                 preferencesRepository.enableSiteHeader,
                 preferencesRepository.showNavLabels,
-                preferencesRepository.useSystemFont,
                 preferencesRepository.defaultTab,
                 preferencesRepository.darkTheme,
                 preferencesRepository.blockDirectX,
@@ -52,13 +51,12 @@ class SettingsViewModel(
                 val trueBlack = args[2] as Boolean
                 val siteHeader = args[3] as Boolean
                 val showLabels = args[4] as Boolean
-                val useSystemFont = args[5] as Boolean
-                val defaultTab = args[6] as String
-                val dark = args[7] as Boolean?
-                val blockDirectX = args[8] as Boolean
+                val defaultTab = args[5] as String
+                val dark = args[6] as Boolean?
+                val blockDirectX = args[7] as Boolean
                 @Suppress("UNCHECKED_CAST")
-                val customInstances = (args[9] as Set<String>).toList()
-                val instanceSettings = args[10] as NitterInstanceSettings
+                val customInstances = (args[8] as Set<String>).toList()
+                val instanceSettings = args[9] as NitterInstanceSettings
 
                 val allInstances = availableInstances + customInstances
 
@@ -69,7 +67,6 @@ class SettingsViewModel(
                     isSiteHeaderEnabled = siteHeader,
                     isNavLabelsEnabled = showLabels,
                     isBlockDirectXEnabled = blockDirectX,
-                    useSystemFont = useSystemFont,
                     defaultTab = defaultTab,
                     isDarkTheme = dark,
                     availableInstances = allInstances,
@@ -167,11 +164,6 @@ class SettingsViewModel(
             is SettingsEvent.UpdateNavLabels -> {
                 viewModelScope.launch {
                     preferencesRepository.setShowNavLabels(event.enabled)
-                }
-            }
-            is SettingsEvent.UpdateSystemFont -> {
-                viewModelScope.launch {
-                    preferencesRepository.setUseSystemFont(event.enabled)
                 }
             }
             is SettingsEvent.UpdateDefaultTab -> {

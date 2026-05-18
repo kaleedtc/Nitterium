@@ -75,6 +75,7 @@ fun SearchScreen(
     initialUsername: String? = null,
     deepLinkUrl: String? = null,
     isDarkTheme: Boolean,
+    onNavigateToSettings: () -> Unit,
     viewModel: SearchViewModel
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -105,7 +106,8 @@ fun SearchScreen(
         state = state,
         isDarkTheme = isDarkTheme,
         onEvent = viewModel::onEvent,
-        snackbarHostState = snackbarHostState
+        snackbarHostState = snackbarHostState,
+        onNavigateToSettings = onNavigateToSettings
     )
 }
 
@@ -116,7 +118,8 @@ fun SearchContent(
     state: SearchState,
     isDarkTheme: Boolean,
     onEvent: (SearchEvent) -> Unit,
-    snackbarHostState: SnackbarHostState
+    snackbarHostState: SnackbarHostState,
+    onNavigateToSettings: () -> Unit
 ) {
     var webView: WebView? by remember { mutableStateOf(null) }
     val focusManager = LocalFocusManager.current
@@ -220,7 +223,8 @@ fun SearchContent(
                                 // Do NOT call webView.reload() here. The WebView might be dead/detached.
                                 // Resetting the error state will cause NitterWebView to be recomposed and created fresh.
                                 onEvent(SearchEvent.Refresh)
-                            }
+                            },
+                            onSwitchInstance = onNavigateToSettings
                         )
                     } else {
                         NitterWebView(
@@ -228,7 +232,6 @@ fun SearchContent(
                             isTrueBlack = state.isTrueBlack,
                             isSiteHeaderEnabled = state.isSiteHeaderEnabled,
                             isBlockDirectXEnabled = state.isBlockDirectXEnabled,
-                            useSystemFont = state.useSystemFont,
                             darkTheme = isDarkTheme,
                             isRefreshing = state.isRefreshing,
                             isProfileView = state.currentUsername != null,
@@ -393,4 +396,4 @@ fun SearchContent(
             isLoading = state.isLoading
         )
     }
-    }
+}

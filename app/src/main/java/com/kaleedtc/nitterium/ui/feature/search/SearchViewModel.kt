@@ -12,13 +12,10 @@ import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
-import com.kaleedtc.nitterium.data.repository.FeedRepository
-
 class SearchViewModel(
     private val preferencesRepository: UserPreferencesRepository,
     private val subscriptionRepository: SubscriptionRepository,
-    private val connectivityMonitor: ConnectivityMonitor,
-    private val feedRepository: FeedRepository
+    private val connectivityMonitor: ConnectivityMonitor
 ) : MviViewModel<SearchState, SearchEvent, SearchEffect>(SearchState()) {
 
     init {
@@ -43,8 +40,24 @@ class SearchViewModel(
             }
         }
         viewModelScope.launch {
-            preferencesRepository.useSystemFont.collect { enabled ->
-                setState { copy(useSystemFont = enabled) }
+            preferencesRepository.instanceUrl.collect { newInstanceUrl ->
+                val currentUrl = state.value.currentUrl
+                if (currentUrl.isNotEmpty()) {
+                    try {
+                        val currentUri = URI(currentUrl)
+                        val newBaseUri = URI(newInstanceUrl)
+                        
+                        // Only update if the host is different (it means the instance changed)
+                        if (currentUri.host != newBaseUri.host) {
+                            val newUrl = buildString {
+                                append(newInstanceUrl.trimEnd('/'))
+                                if (currentUri.path != null) append(currentUri.path)
+                                if (currentUri.query != null) append("?${currentUri.query}")
+                            }
+                            setState { copy(currentUrl = newUrl, isError = false, isLoading = isConnected) }
+                        }
+                    } catch (_: Exception) { }
+                }
             }
         }
     }
@@ -96,9 +109,7 @@ class SearchViewModel(
             }
             is SearchEvent.OnAvatarFound -> {
                 setState { copy(avatarUrl = event.url) }
-                // Update Feed cache immediately
                 state.value.currentUsername?.let { username ->
-                    feedRepository.updateAvatar(username, event.url)
                     // Persist if already subscribed
                     viewModelScope.launch {
                         subscriptionRepository.updateSubscriptionAvatar(username, event.url)

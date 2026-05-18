@@ -301,13 +301,7 @@ fun AppSettingsList(
                 onCheckedChange = { onEvent(SettingsEvent.UpdateNavLabels(it)) }
             )
 
-            SettingsSwitch(
-                label = stringResource(R.string.use_system_font),
-                checked = state.useSystemFont,
-                onCheckedChange = { onEvent(SettingsEvent.UpdateSystemFont(it)) }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
             val (tabExpanded, setTabExpanded) = remember { mutableStateOf(false) }
             val availableTabs = listOf("Search", "Subscriptions", "Feed")

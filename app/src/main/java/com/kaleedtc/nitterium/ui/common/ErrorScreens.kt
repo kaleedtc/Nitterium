@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.WifiOff
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -17,7 +18,8 @@ import com.kaleedtc.nitterium.R
 @Composable
 fun ErrorScreen(
     message: String = stringResource(R.string.failed_to_load_content),
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    onSwitchInstance: (() -> Unit)? = null
 ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -36,11 +38,22 @@ fun ErrorScreen(
             style = MaterialTheme.typography.headlineSmall,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onRetry) {
-            Icon(Icons.Default.Refresh, contentDescription = null)
-            Spacer(modifier = Modifier.size(8.dp))
-            Text(stringResource(R.string.retry))
+        Spacer(modifier = Modifier.height(24.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(onClick = onRetry) {
+                Icon(Icons.Default.Refresh, contentDescription = null)
+                Spacer(modifier = Modifier.size(8.dp))
+                Text(stringResource(R.string.retry))
+            }
+            if (onSwitchInstance != null) {
+                Button(onClick = onSwitchInstance) {
+                    Icon(Icons.Default.Settings, contentDescription = null)
+                    Spacer(modifier = Modifier.size(8.dp))
+                    Text(stringResource(R.string.switch_instance))
+                }
+            }
         }
     }
 }

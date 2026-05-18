@@ -24,7 +24,6 @@ class UserPreferencesRepository(
         val TRUE_BLACK = booleanPreferencesKey("true_black")
         val ENABLE_SITE_HEADER = booleanPreferencesKey("enable_site_header")
         val SHOW_NAV_LABELS = booleanPreferencesKey("show_nav_labels")
-        val USE_SYSTEM_FONT = booleanPreferencesKey("use_system_font")
         val DEFAULT_TAB = stringPreferencesKey("default_tab")
         val BLOCK_DIRECT_X = booleanPreferencesKey("block_direct_x")
         val CUSTOM_INSTANCES = androidx.datastore.preferences.core.stringSetPreferencesKey("custom_instances")
@@ -59,11 +58,6 @@ class UserPreferencesRepository(
     val showNavLabels: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.SHOW_NAV_LABELS] ?: true
-        }
-
-    val useSystemFont: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.USE_SYSTEM_FONT] ?: false
         }
 
     val defaultTab: Flow<String> = context.dataStore.data
@@ -132,12 +126,6 @@ class UserPreferencesRepository(
     suspend fun setShowNavLabels(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.SHOW_NAV_LABELS] = enabled
-        }
-    }
-
-    suspend fun setUseSystemFont(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.USE_SYSTEM_FONT] = enabled
         }
     }
 
