@@ -29,7 +29,8 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberBottomSheetState
+import androidx.compose.material3.SheetValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -581,20 +582,6 @@ fun NitterWebView(
                             }
                         }
 
-                        override fun onReceivedHttpError(
-                            view: WebView?,
-                            request: WebResourceRequest?,
-                            errorResponse: WebResourceResponse?
-                        ) {
-                            super.onReceivedHttpError(view, request, errorResponse)
-                            if (request?.isForMainFrame == true) {
-                                latestOnPageError(
-                                    errorResponse?.statusCode ?: 0,
-                                    errorResponse?.reasonPhrase ?: "HTTP Error"
-                                )
-                            }
-                        }
-
                         override fun onReceivedSslError(
                             view: WebView?,
                             handler: android.webkit.SslErrorHandler?,
@@ -792,7 +779,7 @@ fun NitterWebView(
             val shareContentStr = stringResource(R.string.share_content)
             val contentExtErrStr = stringResource(R.string.content_extraction_error)
             val isTweetUrl = urlToCopy.contains("/status/")
-            val sheetState = rememberModalBottomSheetState()
+            val sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden)
 
             ModalBottomSheet(
                 onDismissRequest = { longPressedUrl = null },

@@ -137,9 +137,13 @@ fun SettingsContent(
             }
 
             Box(modifier = Modifier.weight(1f)) {
-                when (selectedTabIndex) {
-                    0 -> AppSettingsList(state, onEvent)
-                    1 -> InstanceSettingsList(state, onEvent)
+                if (state.isLoading) {
+                    com.kaleedtc.nitterium.ui.common.LoadingIndicator(isLoading = true)
+                } else {
+                    when (selectedTabIndex) {
+                        0 -> AppSettingsList(state, onEvent)
+                        1 -> InstanceSettingsList(state, onEvent)
+                    }
                 }
             }
         }

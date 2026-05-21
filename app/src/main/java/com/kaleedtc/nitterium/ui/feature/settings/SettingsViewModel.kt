@@ -61,6 +61,7 @@ class SettingsViewModel(
                 val allInstances = availableInstances + customInstances
 
                 SettingsState(
+                    isLoading = false,
                     instanceUrl = url,
                     isDynamicColor = dynamic,
                     isTrueBlack = trueBlack,

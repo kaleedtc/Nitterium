@@ -3,6 +3,7 @@ package com.kaleedtc.nitterium.ui.feature.settings
 import com.kaleedtc.nitterium.data.model.NitterInstanceSettings
 
 data class SettingsState(
+    val isLoading: Boolean = true,
     val instanceUrl: String = "https://nitter.net",
     val isDynamicColor: Boolean = true,
     val isTrueBlack: Boolean = false,
