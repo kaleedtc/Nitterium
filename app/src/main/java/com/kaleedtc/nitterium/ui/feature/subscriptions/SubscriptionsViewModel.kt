@@ -6,6 +6,7 @@ import com.kaleedtc.nitterium.ui.common.MviViewModel
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 class SubscriptionsViewModel(
     private val subscriptionRepository: SubscriptionRepository,
@@ -52,7 +53,7 @@ class SubscriptionsViewModel(
                 viewModelScope.launch {
                     setState { copy(isRefreshing = true) }
                     // Local DB re-fetches automatically via flow, but we can simulate/ensure sync
-                    kotlinx.coroutines.delay(500)
+                    kotlinx.coroutines.delay(500.milliseconds)
                     setState { copy(isRefreshing = false) }
                 }
             }
