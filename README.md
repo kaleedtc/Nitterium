@@ -16,7 +16,8 @@
   <img src="https://img.shields.io/github/v/release/kaleedtc/Nitterium?style=flat&label=Release&logo=github" alt="Release"/>
 </p>
      
----
+> [!Note]
+> As of August 24, 2026, the upstream project (zedeus/nitter) received a cease and desist letter from X Corp demanding the permanent takedown of their repository and instances. Since Nitterium heavily relies on this source, development is currently on hold. If any new workarounds or developments emerge from the upstream project, I will resume development on Nitterium right away.
 
 **Nitterium** is a modern, native Android app that provides a clean, privacy-respecting way to consume Twitter/X content. By leveraging Nitter instances, it avoids tracking and requires no user account, all wrapped in a beautiful Jetpack Compose interface.
 
