@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.json.Json
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_preferences")
 
@@ -27,6 +28,7 @@ class UserPreferencesRepository(
         val DEFAULT_TAB = stringPreferencesKey("default_tab")
         val BLOCK_DIRECT_X = booleanPreferencesKey("block_direct_x")
         val CUSTOM_INSTANCES = androidx.datastore.preferences.core.stringSetPreferencesKey("custom_instances")
+        val INSTANCE_KEYS = stringPreferencesKey("instance_keys")
     }
 
     val instanceUrl: Flow<String> = context.dataStore.data
@@ -138,6 +140,46 @@ class UserPreferencesRepository(
     suspend fun setBlockDirectX(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.BLOCK_DIRECT_X] = enabled
+        }
+    }
+
+    /**
+     * Access keys per instance, stored as JSON `{host: key}`.
+     *
+     * Some instances - self-hosted ones in particular - only serve their
+     * expensive paths to requests that can identify themselves. The key
+     * therefore belongs to the instance, not to the app: it is sent to the
+     * host it was entered for and never to any other instance.
+     */
+    val instanceKeys: Flow<Map<String, String>> = context.dataStore.data
+        .map { preferences -> readKeys(preferences[PreferencesKeys.INSTANCE_KEYS]) }
+
+    fun instanceKeyFor(url: String): Flow<String> =
+        instanceKeys.map { it[hostOf(url)] ?: "" }
+
+    suspend fun setInstanceKey(url: String, key: String) {
+        val host = hostOf(url)
+        context.dataStore.edit { preferences ->
+            val map = readKeys(preferences[PreferencesKeys.INSTANCE_KEYS]).toMutableMap()
+            if (key.isBlank()) map.remove(host) else map[host] = key.trim()
+            preferences[PreferencesKeys.INSTANCE_KEYS] = Json.encodeToString(map)
+        }
+    }
+
+    companion object {
+        private fun readKeys(raw: String?): Map<String, String> =
+            if (raw.isNullOrBlank()) emptyMap()
+            else try {
+                Json.decodeFromString<Map<String, String>>(raw)
+            } catch (_: Exception) {
+                emptyMap()
+            }
+
+        /** Only the host matters - not the scheme, the port or trailing slashes. */
+        fun hostOf(url: String): String = try {
+            java.net.URI(url.trim()).host?.lowercase() ?: url.trim().lowercase()
+        } catch (_: Exception) {
+            url.trim().lowercase()
         }
     }
 }

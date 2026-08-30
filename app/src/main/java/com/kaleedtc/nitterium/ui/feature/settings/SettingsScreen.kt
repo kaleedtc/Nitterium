@@ -274,6 +274,27 @@ fun AppSettingsList(
                 }
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Access key of the selected instance. It rides along in the user
+            // agent and goes to this host only - instances that keep expensive
+            // paths behind an allowlist let the app through with it.
+            var keyInput by rememberSaveable(state.instanceUrl) { mutableStateOf(state.instanceKey) }
+            LaunchedEffect(state.instanceKey) {
+                if (keyInput.isEmpty() && state.instanceKey.isNotEmpty()) keyInput = state.instanceKey
+            }
+            OutlinedTextField(
+                value = keyInput,
+                onValueChange = {
+                    keyInput = it
+                    onEvent(SettingsEvent.UpdateInstanceKey(it))
+                },
+                label = { Text(stringResource(R.string.instance_access_key)) },
+                placeholder = { Text(stringResource(R.string.instance_access_key_hint)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
             Spacer(modifier = Modifier.height(24.dp))
         }
 
