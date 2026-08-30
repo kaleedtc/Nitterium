@@ -63,6 +63,9 @@
     <string name="instance_options">Instance Options</string>
     <string name="network">Network</string>
     <string name="nitter_instance_url">Nitter Instance URL</string>
+    <string name="instance_access_key">Instance access key (optional)</string>
+    <string name="instance_access_key_hint">Sent to this instance only</string>
+    <string name="instance_key_imported">Access key saved for %1$s</string>
     <string name="appearance">Appearance</string>
     <string name="dynamic_color">Dynamic Color</string>
     <string name="true_black">True Black (OLED)</string>

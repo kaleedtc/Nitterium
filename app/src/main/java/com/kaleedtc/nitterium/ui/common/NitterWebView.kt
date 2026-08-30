@@ -34,6 +34,7 @@ import androidx.compose.material3.SheetValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -46,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import com.kaleedtc.nitterium.data.repository.UserPreferencesRepository
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -90,6 +92,14 @@ fun NitterWebView(
 
     var longPressedUrl by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
+
+    // Access key for this instance (from settings). It is appended to the
+    // user agent and therefore only ever reaches the host it was entered for -
+    // instances that open single paths to known clients let the app through
+    // without anyone needing a fixed IP address.
+    val preferencesRepository = remember { UserPreferencesRepository(context) }
+    val instanceKeys by preferencesRepository.instanceKeys.collectAsState(initial = emptyMap())
+    val instanceKey = instanceKeys[UserPreferencesRepository.hostOf(url)] ?: ""
 
     DisposableEffect(Unit) {
         onDispose {
@@ -422,6 +432,20 @@ fun NitterWebView(
 
     Box(modifier = modifier.fillMaxSize()) {
         var webViewRef by remember { mutableStateOf<WebView?>(null) }
+
+        // When the key is changed in settings, hand the new user agent to the
+        // WebView that is already running and reload.
+        LaunchedEffect(instanceKey, webViewRef) {
+            val view = webViewRef ?: return@LaunchedEffect
+            val wanted = withKey(
+                view.settings.userAgentString.substringBefore(" Nitterium/"),
+                instanceKey
+            )
+            if (view.settings.userAgentString != wanted) {
+                view.settings.userAgentString = wanted
+                view.reload()
+            }
+        }
         val webViewStateBundle = rememberSaveable(
             saver = Saver(
             save = {
@@ -508,8 +532,11 @@ fun NitterWebView(
                         cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
                         mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                         val defaultUA = userAgentString
-                        userAgentString = defaultUA.replace("; wv", "")
-                            .replace(Regex("Version/\\d+\\.\\d+\\s+"), "")
+                        userAgentString = withKey(
+                            defaultUA.replace("; wv", "")
+                                .replace(Regex("Version/\\d+\\.\\d+\\s+"), ""),
+                            instanceKey
+                        )
                     }
 
                     // Enable third party cookies for better instance compatibility
@@ -888,3 +915,7 @@ class NitterInterface(
         onOpenGallery(list, initialIndex)
     }
 }
+
+/** Appends the instance access key to the user agent; unchanged without a key. */
+private fun withKey(userAgent: String, key: String): String =
+    if (key.isBlank()) userAgent else "$userAgent Nitterium/${key.trim()}"

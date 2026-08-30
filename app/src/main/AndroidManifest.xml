@@ -25,6 +25,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Set the access key from a link: nitterium://instance?url=...&key=...
+                 Lets a key be taken over from a QR code or a setup link instead
+                 of typing 32 characters by hand. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="nitterium" android:host="instance" />
+            </intent-filter>
+
             <!-- Deep Links -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
