@@ -5,6 +5,7 @@ import com.kaleedtc.nitterium.data.model.NitterInstanceSettings
 data class SettingsState(
     val isLoading: Boolean = true,
     val instanceUrl: String = "https://nitter.net",
+    val instanceKey: String = "",
     val isDynamicColor: Boolean = true,
     val isTrueBlack: Boolean = false,
     val isSiteHeaderEnabled: Boolean = false,
@@ -20,6 +21,7 @@ data class SettingsState(
 
 sealed interface SettingsEvent {
     data class UpdateInstanceUrl(val url: String) : SettingsEvent
+    data class UpdateInstanceKey(val key: String) : SettingsEvent
     data class AddCustomInstance(val url: String) : SettingsEvent
     data class RemoveCustomInstance(val url: String) : SettingsEvent
     data class UpdateDynamicColor(val enabled: Boolean) : SettingsEvent

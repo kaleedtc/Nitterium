@@ -44,6 +44,7 @@ class SettingsViewModel(
                 preferencesRepository.darkTheme,
                 preferencesRepository.blockDirectX,
                 preferencesRepository.customInstances,
+                preferencesRepository.instanceKeys,
                 _instanceSettings
             ) { args ->
                 val url = args[0] as String
@@ -56,13 +57,16 @@ class SettingsViewModel(
                 val blockDirectX = args[7] as Boolean
                 @Suppress("UNCHECKED_CAST")
                 val customInstances = (args[8] as Set<String>).toList()
-                val instanceSettings = args[9] as NitterInstanceSettings
+                @Suppress("UNCHECKED_CAST")
+                val instanceKeys = args[9] as Map<String, String>
+                val instanceSettings = args[10] as NitterInstanceSettings
 
                 val allInstances = availableInstances + customInstances
 
                 SettingsState(
                     isLoading = false,
                     instanceUrl = url,
+                    instanceKey = instanceKeys[UserPreferencesRepository.hostOf(url)] ?: "",
                     isDynamicColor = dynamic,
                     isTrueBlack = trueBlack,
                     isSiteHeaderEnabled = siteHeader,
@@ -129,6 +133,11 @@ class SettingsViewModel(
             is SettingsEvent.UpdateInstanceUrl -> {
                 viewModelScope.launch {
                     preferencesRepository.setInstanceUrl(event.url)
+                }
+            }
+            is SettingsEvent.UpdateInstanceKey -> {
+                viewModelScope.launch {
+                    preferencesRepository.setInstanceKey(state.value.instanceUrl, event.key)
                 }
             }
             is SettingsEvent.AddCustomInstance -> {
