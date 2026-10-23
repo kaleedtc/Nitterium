@@ -1,14 +1,11 @@
 package com.kaleedtc.nitterium.ui.feature.subscriptions
 
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,20 +14,20 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,7 +39,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,6 +46,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,12 +56,16 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.kaleedtc.nitterium.ui.common.GroupAssignmentDialog
 import com.kaleedtc.nitterium.data.model.Subscription
+import com.kaleedtc.nitterium.data.model.SubscriptionSortOrder
 
 import androidx.compose.ui.res.stringResource
 import com.kaleedtc.nitterium.R
@@ -77,27 +78,10 @@ fun SubscriptionsScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
-    ) { uri ->
-        viewModel.onEvent(SubscriptionsEvent.SubscriptionsExported(uri))
-    }
-
-    val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        viewModel.onEvent(SubscriptionsEvent.SubscriptionsImported(uri))
-    }
-
     LaunchedEffect(viewModel.effect) {
         viewModel.effect.collect { effect ->
             when (effect) {
                 is SubscriptionsEffect.ShowSnackbar -> snackbarHostState.showSnackbar(effect.message)
-                is SubscriptionsEffect.LaunchExportIntent -> {
-                    val date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-                    exportLauncher.launch("Nitterium-subscriptions-$date.json")
-                }
-                is SubscriptionsEffect.LaunchImportIntent -> importLauncher.launch(arrayOf("application/json", "*/*"))
             }
         }
     }
@@ -110,7 +94,6 @@ fun SubscriptionsScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SubscriptionsContent(
     state: SubscriptionsState,
@@ -140,9 +123,29 @@ fun SubscriptionsContent(
     }
 
     val listState = rememberLazyListState()
+    val query = state.searchQuery.trim().removePrefix("@")
+    val visibleSubscriptions = remember(state.subscriptions, query, state.sortOrder) {
+        state.sortOrder.sort(state.subscriptions.filter { it.username.contains(query, ignoreCase = true) })
+    }
+    val isFiltering = state.searchQuery.isNotBlank()
+    var previousQuery by rememberSaveable { mutableStateOf(query) }
+    var previousSortOrder by rememberSaveable { mutableStateOf(state.sortOrder) }
+    LaunchedEffect(query, state.sortOrder) {
+        if (query != previousQuery || state.sortOrder != previousSortOrder) listState.scrollToItem(0)
+        previousQuery = query
+        previousSortOrder = state.sortOrder
+    }
     var draggingItemKey by remember { mutableStateOf<Any?>(null) }
     var itemTranslationY by remember { mutableFloatStateOf(0f) }
     var expectedIndex by remember { mutableStateOf<Int?>(null) }
+
+    LaunchedEffect(state.canReorder) {
+        if (!state.canReorder) {
+            draggingItemKey = null
+            itemTranslationY = 0f
+            expectedIndex = null
+        }
+    }
 
     val pointerInputModifier = Modifier.pointerInput(Unit) {
         detectDragGesturesAfterLongPress(
@@ -246,43 +249,60 @@ fun SubscriptionsContent(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
                     ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.import_label)) },
-                            onClick = {
-                                showMenu = false
-                                onEvent(SubscriptionsEvent.ImportClicked)
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.export_label)) },
-                            onClick = {
-                                showMenu = false
-                                onEvent(SubscriptionsEvent.ExportClicked)
-                            }
-                        )
+                        listOf(
+                            SubscriptionSortOrder.USERNAME to R.string.sort_subscriptions_username,
+                            SubscriptionSortOrder.SUBSCRIPTION_DATE to R.string.sort_subscriptions_date,
+                            SubscriptionSortOrder.MANUAL to R.string.sort_subscriptions_manual
+                        ).forEach { (order, label) ->
+                            DropdownMenuItem(
+                                text = { Text(stringResource(label)) },
+                                modifier = Modifier.semantics { selected = state.sortOrder == order },
+                                trailingIcon = {
+                                    if (state.sortOrder == order) Icon(Icons.Default.Check, contentDescription = null)
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    onEvent(SubscriptionsEvent.SortOrderChanged(order))
+                                }
+                            )
+                        }
                     }
                 }
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
-        PullToRefreshBox(
-            isRefreshing = state.isRefreshing,
-            onRefresh = { onEvent(SubscriptionsEvent.Refresh) },
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
+        Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            OutlinedTextField(
+                value = state.searchQuery,
+                onValueChange = { onEvent(SubscriptionsEvent.SearchQueryChanged(it)) },
+                label = { Text(stringResource(R.string.search_subscriptions)) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (state.searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { onEvent(SubscriptionsEvent.SearchQueryChanged("")) }) {
+                            Icon(Icons.Default.Close, stringResource(R.string.clear_search))
+                        }
+                    }
+                },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            )
             LazyColumn(
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(16.dp)
-                    .then(pointerInputModifier),
+                    .then(if (state.canReorder) pointerInputModifier else Modifier),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                itemsIndexed(state.subscriptions, key = { _, sub -> sub.username }) { _, sub ->
+                if (visibleSubscriptions.isEmpty()) {
+                    item {
+                        Text(stringResource(if (isFiltering) R.string.no_matching_subscriptions else R.string.no_subscriptions_feed))
+                    }
+                }
+                itemsIndexed(visibleSubscriptions, key = { _, sub -> sub.username }) { _, sub ->
                     val isDragging = sub.username == draggingItemKey
                     val modifier = Modifier
                         .animateItem()
@@ -315,61 +335,6 @@ fun SubscriptionsContent(
 }
 
 @Composable
-fun GroupAssignmentDialog(
-    subscription: Subscription,
-    allGroups: List<com.kaleedtc.nitterium.data.model.FeedGroup>,
-    onDismiss: () -> Unit,
-    onConfirm: (List<String>) -> Unit
-) {
-    var selectedGroupIds by remember { mutableStateOf(subscription.groupIds) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.assign_to_groups)) },
-        text = {
-            if (allGroups.isEmpty()) {
-                Text(stringResource(R.string.no_groups_created))
-            } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(allGroups) { group ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    selectedGroupIds = if (selectedGroupIds.contains(group.id)) {
-                                        selectedGroupIds - group.id
-                                    } else {
-                                        selectedGroupIds + group.id
-                                    }
-                                }
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(
-                                checked = selectedGroupIds.contains(group.id),
-                                onCheckedChange = null
-                            )
-                            Spacer(modifier = Modifier.size(8.dp))
-                            Text(group.name)
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(selectedGroupIds) }) {
-                Text(stringResource(R.string.ok))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
-        }
-    )
-}
-
-@Composable
 fun SubscriptionItem(
     subscription: Subscription,
     modifier: Modifier = Modifier,
@@ -377,6 +342,7 @@ fun SubscriptionItem(
     onDelete: () -> Unit,
     onManageGroups: () -> Unit
 ) {
+    var showActions by remember(subscription.username) { mutableStateOf(false) }
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -387,7 +353,7 @@ fun SubscriptionItem(
     ) {
         if (subscription.avatarUrl != null) {
             AsyncImage(
-                model = subscription.avatarUrl,
+                model = com.kaleedtc.nitterium.data.security.UrlPolicy.httpsUrl(subscription.avatarUrl)?.toString(),
                 contentDescription = stringResource(R.string.avatar_description, subscription.username),
                 modifier = Modifier
                     .size(40.dp)
@@ -413,20 +379,29 @@ fun SubscriptionItem(
             overflow = TextOverflow.Ellipsis
         )
 
-        IconButton(onClick = onManageGroups) {
-            Icon(
-                imageVector = Icons.Default.FolderOpen,
-                contentDescription = stringResource(R.string.groups),
-                tint = MaterialTheme.colorScheme.primary
-            )
-        }
-
-        IconButton(onClick = onDelete) {
-            Icon(
-                imageVector = Icons.Default.Delete,
-                contentDescription = stringResource(R.string.delete),
-                tint = MaterialTheme.colorScheme.error
-            )
+        Box {
+            IconButton(onClick = { showActions = true }) {
+                Icon(
+                    imageVector = Icons.Default.PersonRemove,
+                    contentDescription = stringResource(R.string.subscription_options, subscription.username)
+                )
+            }
+            DropdownMenu(expanded = showActions, onDismissRequest = { showActions = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.assign_to_groups)) },
+                    onClick = {
+                        showActions = false
+                        onManageGroups()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.unsubscribe_confirm), color = MaterialTheme.colorScheme.error) },
+                    onClick = {
+                        showActions = false
+                        onDelete()
+                    }
+                )
+            }
         }
     }
 }
