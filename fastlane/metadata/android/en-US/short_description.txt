@@ -1,1 +1,1 @@
-A privacy-focused Android app and wrapper for Nitter.
+An Android app for Nitter and Teapot with local subscriptions and no Twitter/X account required.
