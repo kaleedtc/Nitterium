@@ -1,6 +1,5 @@
 package com.kaleedtc.nitterium.ui.feature.groups
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,7 +28,6 @@ import com.kaleedtc.nitterium.data.model.FeedGroup
 
 import androidx.core.graphics.toColorInt
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedGroupsScreen(
     viewModel: FeedGroupsViewModel,
@@ -124,7 +122,6 @@ fun FeedGroupsScreen(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun GroupCard(
     name: String,
