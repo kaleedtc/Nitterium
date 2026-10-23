@@ -23,6 +23,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
@@ -59,6 +61,7 @@ import com.kaleedtc.nitterium.ui.feature.groups.FeedGroupsViewModel
 import com.kaleedtc.nitterium.ui.navigation.FeedGroupDetails
 
 import com.kaleedtc.nitterium.ui.common.LocalFullScreenMode
+import com.kaleedtc.nitterium.ui.common.InstancePicker
 
 import androidx.compose.ui.res.stringResource
 import com.kaleedtc.nitterium.R
@@ -78,6 +81,10 @@ fun NitteriumApp(
     val isFullScreen = LocalFullScreenMode.current.value
 
     val currentTab = rememberSaveable { mutableStateOf(defaultTab) }
+    var showInstancePicker by rememberSaveable { mutableStateOf(false) }
+    if (showInstancePicker) {
+        InstancePicker(app.userPreferencesRepository, onDismiss = { showInstancePicker = false })
+    }
 
     // Handle deep links by navigating to Search tab
     LaunchedEffect(initialIntentUrl) {
@@ -217,13 +224,13 @@ fun NitteriumApp(
     ) { innerPadding ->
         val layoutDirection = LocalLayoutDirection.current
         
-        val startDestination = when (defaultTab) {
+        val startDestination = remember { when (defaultTab) {
             "Search" -> Search()
             "Subscriptions" -> Subscriptions
             "Feed" -> Feed
             "Settings" -> Settings
             else -> Search()
-        }
+        } }
 
         NavHost(
             navController = navController,
@@ -245,7 +252,8 @@ fun NitteriumApp(
                         SearchViewModel(
                             app.userPreferencesRepository,
                             app.subscriptionRepository,
-                            app.connectivityMonitor
+                            app.connectivityMonitor,
+                            app.feedGroupRepository
                         )
                     }
                 )
@@ -253,16 +261,7 @@ fun NitteriumApp(
                 SearchScreen(
                     deepLinkUrl = initialIntentUrl,
                     isDarkTheme = isDarkTheme,
-                    onNavigateToSettings = {
-                        currentTab.value = "Settings"
-                        navController.navigate(Settings) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
+                    onSwitchInstance = { showInstancePicker = true },
                     viewModel = viewModel
                 )
 
@@ -280,7 +279,8 @@ fun NitteriumApp(
                         ProfileViewModel(
                             app.userPreferencesRepository,
                             app.subscriptionRepository,
-                            app.connectivityMonitor
+                            app.connectivityMonitor,
+                            app.feedGroupRepository
                         )
                     }
                 )
@@ -289,16 +289,7 @@ fun NitteriumApp(
                     username = profile.username,
                     isDarkTheme = isDarkTheme,
                     onNavigateBack = { navController.popBackStack() },
-                    onNavigateToSettings = {
-                        currentTab.value = "Settings"
-                        navController.navigate(Settings) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
+                    onSwitchInstance = { showInstancePicker = true },
                     viewModel = viewModel
                 )
             }
@@ -308,7 +299,8 @@ fun NitteriumApp(
                     factory = viewModelFactory {
                         SubscriptionsViewModel(
                             app.subscriptionRepository,
-                            app.feedGroupRepository
+                            app.feedGroupRepository,
+                            app.userPreferencesRepository
                         )
                     }
                 )
@@ -358,23 +350,14 @@ fun NitteriumApp(
                 FeedScreen(
                     isDarkTheme = isDarkTheme,
                     onNavigateBack = { navController.popBackStack() },
-                    onNavigateToSettings = {
-                        currentTab.value = "Settings"
-                        navController.navigate(Settings) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
+                    onSwitchInstance = { showInstancePicker = true },
                     viewModel = viewModel
                 )
             }
             composable<Settings> {
                 val viewModel: SettingsViewModel = viewModel(
                     factory = viewModelFactory {
-                        SettingsViewModel(app.userPreferencesRepository, app)
+                        SettingsViewModel(app.userPreferencesRepository, app, app.backupRepository)
                     }
                 )
                 SettingsScreen(viewModel = viewModel)
