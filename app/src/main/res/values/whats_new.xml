@@ -1,0 +1,19 @@
+<resources>
+    <string name="whats_new_title">What’s new</string>
+    <string name="whats_new_intro">This release adds Teapot support, subscription sorting, backups, and a new app icon.</string>
+    <string name="whats_new_instances_title">Nitter and Teapot</string>
+    <string name="whats_new_instances_summary">Use Nitter or Teapot. If an instance is unavailable, choose another in the app and keep your current page.</string>
+    <string name="whats_new_subscriptions_title">Find and sort subscriptions</string>
+    <string name="whats_new_subscriptions_summary">Search saved accounts, sort by username or subscription date, or arrange them manually. Long-press the subscription button to assign groups.</string>
+    <string name="whats_new_backups_title">Backups and imports</string>
+    <string name="whats_new_backups_summary">Export subscriptions, groups, settings and instance options. Preview backups before restoring, or import subscriptions from QuaX.</string>
+    <string name="whats_new_browsing_title">Keep your place</string>
+    <string name="whats_new_browsing_summary">Return from a tweet to the same timeline position. Theme changes keep your page.</string>
+    <string name="whats_new_support_title">Enjoying Nitterium?</string>
+    <string name="whats_new_support_summary">If you find the app useful, please consider supporting its development through the donation section.</string>
+    <string name="whats_new_donate">Donation options</string>
+    <string name="whats_new_hide_future">Don’t show this after updates</string>
+    <string name="whats_new_show_after_updates">Show what’s new after updates</string>
+    <string name="whats_new_continue">Continue</string>
+    <string name="whats_new_save_failed">Could not save your preference. Please try again.</string>
+</resources>

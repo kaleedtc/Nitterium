@@ -11,6 +11,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -19,6 +20,7 @@ import com.kaleedtc.nitterium.ui.NitteriumApp
 import com.kaleedtc.nitterium.ui.common.LocalFullScreenMode
 import com.kaleedtc.nitterium.ui.common.viewModelFactory
 import com.kaleedtc.nitterium.ui.theme.NitteriumTheme
+import com.kaleedtc.nitterium.ui.feature.whatsnew.WhatsNewScreen
 
 class MainActivity : ComponentActivity() {
 
@@ -31,14 +33,16 @@ class MainActivity : ComponentActivity() {
         intentUrl.value = intent?.dataString
 
         val app = application as NitteriumApplication
+        val packageInfo = packageManager.getPackageInfo(packageName, 0)
         val viewModel: MainViewModel by viewModels {
             viewModelFactory {
-                MainViewModel(app.userPreferencesRepository)
+                MainViewModel(app.userPreferencesRepository, packageInfo.longVersionCode)
             }
         }
 
         setContent {
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            val uriHandler = LocalUriHandler.current
             
             if (uiState.isLoading) {
                 return@setContent
@@ -70,14 +74,24 @@ class MainActivity : ComponentActivity() {
                     dynamicColor = uiState.isDynamicColor,
                     trueBlack = uiState.isTrueBlack
                 ) {
-                    NitteriumApp(
-                        app = app,
-                        isDarkTheme = darkTheme,
-                        initialIntentUrl = intentUrl.value,
-                        onIntentHandled = { intentUrl.value = null },
-                        showNavLabels = uiState.showNavLabels,
-                        defaultTab = uiState.defaultTab
-                    )
+                    if (uiState.showReleaseNotes) {
+                        WhatsNewScreen(
+                            versionName = packageInfo.versionName.orEmpty(),
+                            isSaving = uiState.isSavingReleaseNotes,
+                            saveFailed = uiState.releaseNotesSaveFailed,
+                            onContinue = viewModel::dismissReleaseNotes,
+                            onDonate = { uriHandler.openUri(getString(R.string.donate_url)) }
+                        )
+                    } else {
+                        NitteriumApp(
+                            app = app,
+                            isDarkTheme = darkTheme,
+                            initialIntentUrl = intentUrl.value,
+                            onIntentHandled = { intentUrl.value = null },
+                            showNavLabels = uiState.showNavLabels,
+                            defaultTab = uiState.defaultTab
+                        )
+                    }
                 }
             }
         }
