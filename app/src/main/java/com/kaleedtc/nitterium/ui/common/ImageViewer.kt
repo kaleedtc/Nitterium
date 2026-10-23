@@ -70,6 +70,8 @@ fun ImageViewer(
     initialIndex: Int,
     onDismiss: () -> Unit
 ) {
+    if (imageUrls.size !in 1..50 || initialIndex !in imageUrls.indices ||
+        imageUrls.any { com.kaleedtc.nitterium.data.security.UrlPolicy.httpsUrl(it) == null }) return
     val pagerState = rememberPagerState(initialPage = initialIndex) { imageUrls.size }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -186,7 +188,7 @@ fun ImageViewer(
                 onClick = {
                     scope.launch {
                         val request = ImageRequest.Builder(context)
-                            .data(imageUrls[pagerState.currentPage])
+                            .data(imageUrls.getOrNull(pagerState.currentPage) ?: return@launch)
                             .allowHardware(false)
                             .build()
 
