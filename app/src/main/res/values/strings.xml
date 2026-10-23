@@ -21,7 +21,7 @@
     <string name="retweeted_by">Retweeted by %1$s</string>
 
     <!-- Search Screen -->
-    <string name="search_nitter">Search Nitter</string>
+    <string name="search_nitter">Search tweets</string>
     <string name="search_hint">Type a query or @username above</string>
     <string name="search_placeholder">Search tweets or @user</string>
     <string name="search_for">Search for \"%1$s\"</string>
@@ -40,12 +40,17 @@
     <!-- Subscriptions Screen -->
     <string name="import_label">Import</string>
     <string name="export_label">Export</string>
+    <string name="sort_subscriptions_username">Sort by username (A–Z)</string>
+    <string name="sort_subscriptions_date">Sort by subscription date</string>
+    <string name="sort_subscriptions_manual">Manual order</string>
 
     <!-- Profile Screen -->
     <string name="failed_to_load_profile">Failed to load profile. This instance might be temporarily blocked or down.</string>
     <string name="renderer_gone_error">Renderer process has crashed</string>
 
     <string name="switch_instance">Switch Instance</string>
+    <string name="instance_switch_failed">Could not switch instance. Please try again.</string>
+    <string name="instance_unavailable_error">Instance has no auth tokens, or is fully rate limited. Switch instance or try again later.</string>
 
     <!-- Groups Section -->
     <string name="groups">Groups</string>
@@ -60,9 +65,46 @@
 
     <!-- Settings Screen -->
     <string name="app_settings">App Settings</string>
-    <string name="instance_options">Instance Options</string>
+    <string name="instance_options">Instance</string>
+    <string name="backup_tab">Backups</string>
+    <string name="backup_description">Save a backup file somewhere you can access after reinstalling the app or moving to another device.</string>
+    <string name="backup_include">Include in backup</string>
+    <string name="backup_subscriptions">Subscriptions only</string>
+    <string name="backup_subscriptions_description">Your saved profiles, without group assignments.</string>
+    <string name="backup_subscriptions_groups">Subscriptions and groups</string>
+    <string name="backup_subscriptions_groups_description">Your profiles, groups, and group assignments.</string>
+    <string name="backup_settings">Settings only</string>
+    <string name="backup_settings_description">Appearance, navigation, instances, and instance options.</string>
+    <string name="backup_everything">Everything</string>
+    <string name="backup_everything_description">Subscriptions, groups, group assignments, and settings.</string>
+    <string name="backup_create">Create backup</string>
+    <string name="backup_restore_file">Restore from file</string>
+    <string name="backup_restore_description">Choose a backup to review its contents before restoring. Existing subscription exports and QuaX backups are also supported.</string>
+    <string name="backup_restore_title">Restore backup?</string>
+    <string name="backup_restore_confirm">Restore</string>
+    <string name="backup_settings_included">App settings and saved instance options</string>
+    <plurals name="backup_skipped_count">
+        <item quantity="one">%d unsupported or invalid entry skipped</item>
+        <item quantity="other">%d unsupported or invalid entries skipped</item>
+    </plurals>
+    <string name="backup_merge_note">Profiles and groups will be merged with your current list. Existing profiles and groups are kept.</string>
+    <string name="backup_settings_replace_note">The saved settings will replace your current app settings. Settings take effect immediately.</string>
+    <string name="backup_working">Working on your backup…</string>
+    <string name="backup_export_success">Backup saved</string>
+    <string name="backup_export_failed">Could not save the backup. Check the destination and try again.</string>
+    <string name="backup_read_failed">Could not read this backup. Choose a supported backup file.</string>
+    <string name="backup_restore_success">Backup restored</string>
+    <string name="backup_restore_failed">Could not restore the backup. Please try again.</string>
+    <plurals name="backup_subscription_count">
+        <item quantity="one">%d subscription</item>
+        <item quantity="other">%d subscriptions</item>
+    </plurals>
+    <plurals name="backup_group_count">
+        <item quantity="one">%d group</item>
+        <item quantity="other">%d groups</item>
+    </plurals>
     <string name="network">Network</string>
-    <string name="nitter_instance_url">Nitter Instance URL</string>
+    <string name="nitter_instance_url">Instance URL (Nitter or Teapot)</string>
     <string name="appearance">Appearance</string>
     <string name="dynamic_color">Dynamic Color</string>
     <string name="true_black">True Black (OLED)</string>
@@ -74,7 +116,8 @@
     <string name="system_default">System Default</string>
     <string name="light">Light</string>
     <string name="dark">Dark</string>
-    <string name="global_settings_note">These are global settings and may differ depending on each Nitter instance.</string>
+    <string name="global_settings_note">Options are saved for the selected instance. Reopen or refresh a page to apply changes.</string>
+    <string name="square_avatars">Square profile pictures</string>
     <string name="add_custom_instance">Add Custom Instance</string>
     <string name="custom_instance_url_hint">e.g., https://nitter.example.com</string>
     <string name="add">Add</string>
@@ -94,6 +137,7 @@
 
     <!-- About Section -->
     <string name="about">About</string>
+    <string name="donate_page">Donate</string>
     <string name="app_page">App Page</string>
     <string name="developer_page">Developer Page</string>
     <string name="version">Version %1$s</string>
@@ -108,10 +152,35 @@
 
     <string name="app_github_url" translatable="false">https://github.com/kaleedtc/Nitterium</string>
     <string name="developer_github_url" translatable="false">https://github.com/kaleedtc</string>
+    <string name="donate_url" translatable="false">https://github.com/kaleedtc/Nitterium#donate</string>
 
+
+    <string name="xitter_url" translatable="false">https://xitter.cf</string>
+    <string name="shitter_thepixora_url" translatable="false">https://shitter.thepixora.com</string>
+    <string name="shitter_netbub_url" translatable="false">https://nitter.netbub.com</string>
+    <string name="shitter_pp_ua_url" translatable="false">https://nitter.pp.ua</string>
+    <string name="nitter_kareem_one_url" translatable="false">https://nitter.kareem.one</string>
     <string name="nitter_net_url" translatable="false">https://nitter.net</string>
-    <string name="xcancel_com_url" translatable="false">https://xcancel.com</string>
-    <string name="nitter_catsarch_com_url" translatable="false">https://nitter.catsarch.com</string>
-    <string name="nitter_tiekoetter_com_url" translatable="false">https://nitter.tiekoetter.com</string>
-    <string name="nitter_privacyredirect_com_url" translatable="false">https://nitter.privacyredirect.com</string>
+    <string-array name="default_instance_urls" translatable="false">
+        <item>@string/xitter_url</item>
+        <item>@string/shitter_thepixora_url</item>
+        <item>@string/shitter_netbub_url</item>
+        <item>@string/shitter_pp_ua_url</item>
+        <item>@string/nitter_kareem_one_url</item>
+        <item>@string/nitter_net_url</item>
+    </string-array>
+
+    <string name="subscription_options">Options for @%1$s</string>
+    <string name="save">Save</string>
+    <string name="subscribe_and_save">Subscribe and Save</string>
+    <string name="groups_saved">Feed groups saved</string>
+    <string name="groups_save_failed">Could not save feed groups. Please try again.</string>
+    <string name="search_subscriptions">Search subscriptions</string>
+    <string name="clear_search">Clear search</string>
+    <string name="no_matching_subscriptions">No matching subscriptions</string>
+    <string name="frontend_type">Frontend for this instance</string>
+    <string name="frontend_auto">Automatic detection</string>
+    <string name="mp4_playback">MP4 playback</string>
+    <string name="proxy_media">Proxy images and videos</string>
+    <string name="proxy_media_description">Load images and videos through the selected instance. Keep this enabled when direct connections to X are blocked.</string>
 </resources>
