@@ -1,5 +1,0 @@
-- Added support for Android 11.
-- Added support for opening xcancel rss links.
-- Replaced the WebView feed screen with a fast, native RSS-based Feed screen.
-- Implemented a long-press to copy/share tweets, content, images, and profile links.
-- Updated core app dependencies.

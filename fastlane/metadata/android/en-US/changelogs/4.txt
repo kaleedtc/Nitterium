@@ -1,2 +1,0 @@
-- Minor improvements and Bug Fixes.
-- Added an informative tooltip to the "Block Direct Connections to X" setting.

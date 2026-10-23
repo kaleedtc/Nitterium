@@ -1,0 +1,6 @@
+- Added Teapot support and instance switching from error screens.
+- Added subscription search, sorting and long-press group assignment.
+- Added scoped backups, restore previews and QuaX imports.
+- Improved reading-position, theme and Back navigation behavior.
+- Hardened page bridges, media redirects and imports.
+- Added What's New and a new app icon.

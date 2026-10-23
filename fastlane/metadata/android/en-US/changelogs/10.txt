@@ -1,3 +1,0 @@
-- Introducing Feed Groups! Organize your subscriptions into customizable categories.
-- Removed the broken "Use System Font" and "native RSS-based Feed screen" features.
-- Various under-the-hood stability improvements and bug fixes.
