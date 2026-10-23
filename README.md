@@ -7,7 +7,7 @@
 <p align="left">
   <img src="https://img.shields.io/badge/Android-3DDC84?style=flat&logo=android&logoColor=white" alt="Android"/>
   <img src="https://img.shields.io/badge/API-30%2B-brightgreen.svg?style=flat" alt="API"/>
-  <img src="https://img.shields.io/badge/Kotlin-2.4.0-7F52FF?style=flat&logo=Kotlin&logoColor=white" alt="Kotlin"/>
+  <img src="https://img.shields.io/badge/Kotlin-2.4.21-7F52FF?style=flat&logo=Kotlin&logoColor=white" alt="Kotlin"/>
   <img src="https://img.shields.io/badge/Jetpack%20Compose-4285F4?style=flat&logo=jetpack-compose&logoColor=white" alt="Jetpack Compose"/>
   <img src="https://img.shields.io/github/license/kaleedtc/Nitterium?style=flat" alt="License"/>
   <img src="https://shields.rbtlog.dev/simple/com.kaleedtc.nitterium"/>
@@ -16,30 +16,30 @@
   <img src="https://img.shields.io/github/v/release/kaleedtc/Nitterium?style=flat&label=Release&logo=github" alt="Release"/>
 </p>
      
-**Nitterium** is a modern, native Android app that provides a clean, privacy-respecting way to consume Twitter/X content. By leveraging Nitter instances, it avoids tracking and requires no user account, all wrapped in a beautiful Jetpack Compose interface.
+**Nitterium** lets you browse public Twitter/X content through Nitter and Teapot instances without a Twitter/X account. Save profiles as local subscriptions, organize them into groups, and browse their posts in combined feeds.
 
 ### 🤔 Why this?
 While browsing Nitter on Android, I needed a way to subscribe to accounts I was interested in following, along with some customization options. That led to the creation of this app!
 
 > [!Important]
-> This app depends entirely on Nitter persistence and the operational state of public Nitter instances. It's important to check the source and health of the instance you are using.
+> - Nitterium depends on independently operated Nitter and Teapot instances. Availability, supported features, and feed limits vary between instances. If one stops working or becomes rate limited, try another.
+> - Subscriptions and groups are stored on your device. Browsing requests go to the instance you choose, and some media may load directly from X depending on your settings.
 
 ---
 
 ## ✨ FEATURES
 
 * 🔒 **Privacy First**: No ads, no tracking, and no Twitter/X account required.
-* 🕸️ **Nitter Integration**: Browse seamlessly using your preferred Nitter instance via a custom WebView wrapper.
-* 📌 **Subscriptions**: Save and manage your favorite accounts locally on your device. Each account can be rearranged individually by dragging and dropping to suit your preferences!
-* 🗂️ **Feed Groups**: Organize your subscriptions into customizable categories with distinct icons and colors, breaking past URL length limits and keeping your feeds organized.
+* 📌 **Local subscriptions**: Save profiles on your device, sort them by username or subscription date, or arrange them manually.
+* 🗂️ **Grouped feeds**: Browse posts from a selected group. Give groups their own names, icons, and colors.
 * 👆 **Long-Press & Sharing**: Easily share, copy, or open links, tweets, and media directly via intuitive long-press actions.
-* 🖼️ **Intuitive Image Viewer**: Easily exit the image viewer by swiping up or down, and download images directly to your device.
+* 🖼️ **Intuitive Image Viewer**: Easily exit the image viewer by swiping up or down, and save images directly to your device.
 * 🔄 **Pull-to-Refresh**: Swipe down to reload content seamlessly.
 * 🎨 **Dynamic Theming**: Beautiful Material 3 design that automatically adapts to your system theme and wallpaper (Android 12+).
-* 🚀 **Modern UI**: A fast, responsive user interface built entirely with Kotlin and Jetpack Compose.
-* 🔗 **Deep Linking**: Automatically intercepts Twitter, X, and Nitter links to open them directly in the app.
+* 🚀 **Backup and restore**: Export subscriptions, groups, and settings, and review a backup before restoring it. Import subscriptions from QuaX app backups.
+* 🔗 **Supported links**: Open supported Twitter/X and Nitter links in the app.
 * 🌍 **RTL Support**: Supports RTL content by default.
-* ❤️ **FOSS**: 100% Free and Open-Source Software.
+* ❤️ **Instance selection**: Choose a built-in instance or add your own. Switch from an unavailable instance while keeping the current page.
 
 ---
 
