@@ -3,20 +3,25 @@ package com.kaleedtc.nitterium.ui.feature.subscriptions
 import androidx.lifecycle.viewModelScope
 import com.kaleedtc.nitterium.data.repository.SubscriptionRepository
 import com.kaleedtc.nitterium.ui.common.MviViewModel
+import java.io.IOException
+import kotlinx.coroutines.flow.combine
+import com.kaleedtc.nitterium.data.repository.UserPreferencesRepository
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.milliseconds
 
 class SubscriptionsViewModel(
     private val subscriptionRepository: SubscriptionRepository,
-    groupRepository: com.kaleedtc.nitterium.data.repository.FeedGroupRepository
+    private val groupRepository: com.kaleedtc.nitterium.data.repository.FeedGroupRepository,
+    private val preferencesRepository: UserPreferencesRepository
 ) : MviViewModel<SubscriptionsState, SubscriptionsEvent, SubscriptionsEffect>(SubscriptionsState()) {
 
     init {
-        subscriptionRepository.subscriptions
-            .onEach { subs ->
-                setState { copy(subscriptions = subs) }
+        combine(subscriptionRepository.subscriptions, preferencesRepository.subscriptionSortOrder) { subs, order ->
+            subs to order
+        }
+            .onEach { (subs, order) ->
+                setState { copy(subscriptions = subs, sortOrder = order) }
             }
             .launchIn(viewModelScope)
 
@@ -29,6 +34,7 @@ class SubscriptionsViewModel(
 
     override fun onEvent(event: SubscriptionsEvent) {
         when (event) {
+            is SubscriptionsEvent.SearchQueryChanged -> setState { copy(searchQuery = event.query) }
             is SubscriptionsEvent.UpdateSubscriptionGroups -> {
                 viewModelScope.launch {
                     subscriptionRepository.updateSubscriptionGroups(event.username, event.groupIds)
@@ -49,49 +55,17 @@ class SubscriptionsViewModel(
             is SubscriptionsEvent.CancelDelete -> {
                 setState { copy(subscriptionToDelete = null) }
             }
-            is SubscriptionsEvent.Refresh -> {
+            is SubscriptionsEvent.SortOrderChanged -> {
                 viewModelScope.launch {
-                    setState { copy(isRefreshing = true) }
-                    // Local DB re-fetches automatically via flow, but we can simulate/ensure sync
-                    kotlinx.coroutines.delay(500.milliseconds)
-                    setState { copy(isRefreshing = false) }
-                }
-            }
-            is SubscriptionsEvent.ExportClicked -> {
-                setEffect { SubscriptionsEffect.LaunchExportIntent }
-            }
-            is SubscriptionsEvent.ImportClicked -> {
-                setEffect { SubscriptionsEffect.LaunchImportIntent }
-            }
-            is SubscriptionsEvent.SubscriptionsExported -> {
-                event.uri?.let { uri ->
-                    viewModelScope.launch {
-                        subscriptionRepository.exportSubscriptions(uri).fold(
-                            onSuccess = {
-                                setEffect { SubscriptionsEffect.ShowSnackbar("Subscriptions exported successfully") }
-                            },
-                            onFailure = {
-                                setEffect { SubscriptionsEffect.ShowSnackbar("Failed to export subscriptions") }
-                            }
-                        )
-                    }
-                }
-            }
-            is SubscriptionsEvent.SubscriptionsImported -> {
-                event.uri?.let { uri ->
-                    viewModelScope.launch {
-                        subscriptionRepository.importSubscriptions(uri).fold(
-                            onSuccess = { count ->
-                                setEffect { SubscriptionsEffect.ShowSnackbar("Imported $count new subscriptions") }
-                            },
-                            onFailure = {
-                                setEffect { SubscriptionsEffect.ShowSnackbar("Failed to import subscriptions") }
-                            }
-                        )
+                    try {
+                        preferencesRepository.setSubscriptionSortOrder(event.order)
+                    } catch (_: IOException) {
+                        setEffect { SubscriptionsEffect.ShowSnackbar("Could not save subscription sort order") }
                     }
                 }
             }
             is SubscriptionsEvent.ReorderSubscriptions -> {
+                if (!state.value.canReorder) return
                 val currentList = state.value.subscriptions.toMutableList()
                 if (event.fromIndex in currentList.indices && event.toIndex in currentList.indices) {
                     val item = currentList.removeAt(event.fromIndex)
@@ -100,8 +74,10 @@ class SubscriptionsViewModel(
                 }
             }
             is SubscriptionsEvent.SaveSubscriptionOrder -> {
+                if (!state.value.canReorder) return
+                val order = state.value.subscriptions
                 viewModelScope.launch {
-                    subscriptionRepository.updateSubscriptionOrder(state.value.subscriptions)
+                    subscriptionRepository.updateSubscriptionOrder(order)
                 }
             }
         }
