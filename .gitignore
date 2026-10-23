@@ -9,3 +9,6 @@
 .cxx
 local.properties
 /app/release/
+
+.kotlin/
+/docs/
