@@ -15,7 +15,9 @@ import com.kaleedtc.nitterium.data.repository.SubscriptionRepository
 import com.kaleedtc.nitterium.data.repository.UserPreferencesRepository
 import okhttp3.OkHttpClient
 import okio.Path.Companion.toPath
-import java.net.URL
+import com.kaleedtc.nitterium.data.security.ImageRequestInterceptor
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 
 class NitteriumApplication : Application(), SingletonImageLoader.Factory {
 
@@ -23,12 +25,16 @@ class NitteriumApplication : Application(), SingletonImageLoader.Factory {
     lateinit var userPreferencesRepository: UserPreferencesRepository
     lateinit var feedGroupRepository: com.kaleedtc.nitterium.data.repository.FeedGroupRepository
     lateinit var connectivityMonitor: ConnectivityMonitor
+    lateinit var backupRepository: com.kaleedtc.nitterium.data.repository.BackupRepository
 
     override fun onCreate() {
         super.onCreate()
         subscriptionRepository = SubscriptionRepository(this)
         userPreferencesRepository = UserPreferencesRepository(this)
         feedGroupRepository = com.kaleedtc.nitterium.data.repository.FeedGroupRepository(this)
+        backupRepository = com.kaleedtc.nitterium.data.repository.BackupRepository(
+            this, subscriptionRepository, feedGroupRepository, userPreferencesRepository
+        )
         connectivityMonitor = ConnectivityMonitorImpl(this)
     }
 
@@ -39,32 +45,15 @@ class NitteriumApplication : Application(), SingletonImageLoader.Factory {
             .replace(Regex("Version/\\d+\\.\\d+\\s+"), "")
 
         val okHttpClient = OkHttpClient.Builder()
-            .addInterceptor { chain ->
-                val originalRequest = chain.request()
-                val urlString = originalRequest.url.toString()
-                val cookies = cookieManager.getCookie(urlString)
-
-                val host = try {
-                    val url = URL(urlString)
-                    "${url.protocol}://${url.host}/"
-                } catch (_: Exception) {
-                    ""
-                }
-
-                val requestBuilder = originalRequest.newBuilder()
-                    .header("User-Agent", strippedUserAgent)
-                    .header("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
-                    .header("Accept-Language", "en-US,en;q=0.9")
-                if (host.isNotEmpty()) {
-                    requestBuilder.header("Referer", host)
-                }
-                    
-                if (!cookies.isNullOrEmpty()) {
-                    requestBuilder.header("Cookie", cookies)
-                }
-                
-                chain.proceed(requestBuilder.build())
-            }
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .addInterceptor(ImageRequestInterceptor(
+                // Interceptors run on the image loader's worker. Read the current preference on
+                // each hop; a failed read fails the request instead of disabling privacy controls.
+                blockDirectX = { runBlocking { userPreferencesRepository.blockDirectX.first() } },
+                cookiesForUrl = cookieManager::getCookie,
+                userAgent = strippedUserAgent
+            ))
             .build()
 
         return ImageLoader.Builder(context)

@@ -1,29 +1,30 @@
 package com.kaleedtc.nitterium.ui.feature.settings
 
 import android.app.Application
-import android.webkit.CookieManager
+import com.kaleedtc.nitterium.data.frontend.FrontendType
+import com.kaleedtc.nitterium.data.frontend.InstanceSettingsCookies
+import com.kaleedtc.nitterium.data.repository.CookieInstanceOptionsStore
 import androidx.lifecycle.viewModelScope
 import com.kaleedtc.nitterium.R
 import com.kaleedtc.nitterium.data.model.NitterInstanceSettings
+import com.kaleedtc.nitterium.data.model.ReleaseNotesPreferences
 import com.kaleedtc.nitterium.data.repository.UserPreferencesRepository
+import com.kaleedtc.nitterium.data.repository.BackupRepository
 import com.kaleedtc.nitterium.ui.common.MviViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class SettingsViewModel(
     private val preferencesRepository: UserPreferencesRepository,
-    application: Application
+    private val application: Application,
+    private val backupRepository: BackupRepository
 ) : MviViewModel<SettingsState, SettingsEvent, SettingsEffect>(SettingsState()) {
 
-    private val availableInstances = listOf(
-        application.getString(R.string.nitter_net_url),
-        application.getString(R.string.xcancel_com_url),
-        application.getString(R.string.nitter_catsarch_com_url),
-        application.getString(R.string.nitter_tiekoetter_com_url),
-        application.getString(R.string.nitter_privacyredirect_com_url)
-    )
+    private val availableInstances = application.resources.getStringArray(R.array.default_instance_urls).toList()
 
+    private val instanceOptions = CookieInstanceOptionsStore()
     private val _instanceSettings = MutableStateFlow(NitterInstanceSettings())
     private val _appVersion = try {
         val packageInfo = application.packageManager.getPackageInfo(application.packageName, 0)
@@ -44,7 +45,10 @@ class SettingsViewModel(
                 preferencesRepository.darkTheme,
                 preferencesRepository.blockDirectX,
                 preferencesRepository.customInstances,
-                _instanceSettings
+                _instanceSettings,
+                preferencesRepository.frontendMode,
+                preferencesRepository.frontend,
+                preferencesRepository.releaseNotesPreferences
             ) { args ->
                 val url = args[0] as String
                 val dynamic = args[1] as Boolean
@@ -61,6 +65,8 @@ class SettingsViewModel(
                 val allInstances = availableInstances + customInstances
 
                 SettingsState(
+                    frontendMode = args[10] as FrontendType,
+                    frontend = args[11] as FrontendType,
                     isLoading = false,
                     instanceUrl = url,
                     isDynamicColor = dynamic,
@@ -73,65 +79,75 @@ class SettingsViewModel(
                     availableInstances = allInstances,
                     customInstances = customInstances,
                     instanceSettings = instanceSettings,
-                    appVersion = _appVersion
+                    appVersion = _appVersion,
+                    showReleaseNotesAfterUpdates = (args[12] as ReleaseNotesPreferences).enabled
                 )
             }.collect { newState ->
-                setState { newState }
+                setState { newState.copy(isBackupBusy = isBackupBusy, backupToRestore = backupToRestore) }
             }
         }
 
         // Load settings when URL changes
         viewModelScope.launch {
-            preferencesRepository.instanceUrl.collect { url ->
-                loadSettingsFromCookies(url)
-            }
+            combine(preferencesRepository.instanceUrl, preferencesRepository.frontend) { url, frontend -> url to frontend }
+                .collect { (url, frontend) -> loadSettingsFromCookies(url, frontend) }
         }
     }
 
-    private fun loadSettingsFromCookies(url: String) {
-        val cookieManager = CookieManager.getInstance()
-        var cookies = cookieManager.getCookie(url) ?: ""
-
-        var updated = false
-        if (!cookies.contains("hlsPlayback=")) {
-            cookieManager.setCookie(url, "hlsPlayback=on; Path=/; SameSite=Lax")
-            updated = true
-        }
-        if (!cookies.contains("proxyVideos=")) {
-            cookieManager.setCookie(url, "proxyVideos=on; Path=/; SameSite=Lax")
-            updated = true
-        }
-        
-        if (updated) {
-            cookieManager.flush()
-            cookies = cookieManager.getCookie(url) ?: ""
-        }
-
-        val settings = NitterInstanceSettings(
-            hideTweetStats = cookies.contains("hideTweetStats=on"),
-            hideBanner = cookies.contains("hideBanner=on"),
-            hidePins = cookies.contains("hidePins=on"),
-            hlsPlayback = cookies.contains("hlsPlayback=on"),
-            infiniteScroll = cookies.contains("infiniteScroll=on"),
-            proxyVideos = cookies.contains("proxyVideos=on"),
-            muteVideos = cookies.contains("muteVideos=on"),
-            autoplayGifs = cookies.contains("autoplayGifs=on")
-        )
-
-        _instanceSettings.value = settings
+    private fun loadSettingsFromCookies(url: String, frontend: FrontendType) {
+        instanceOptions.ensureDefaults(url, frontend)
+        _instanceSettings.value = instanceOptions.read(url, frontend)
     }
 
     override fun onEvent(event: SettingsEvent) {
         when (event) {
+            is SettingsEvent.ExportBackup -> if (!state.value.isBackupBusy) {
+                setEffect { SettingsEffect.LaunchBackupExport(event.scope) }
+            }
+            is SettingsEvent.ImportBackup -> if (!state.value.isBackupBusy) {
+                setEffect { SettingsEffect.LaunchBackupImport }
+            }
+            is SettingsEvent.BackupDestinationChosen -> event.uri?.let { uri ->
+                performBackupOperation(R.string.backup_export_failed) {
+                    backupRepository.export(uri, event.scope, availableInstances).getOrThrow()
+                    setEffect { SettingsEffect.ShowSnackbar(application.getString(R.string.backup_export_success)) }
+                }
+            }
+            is SettingsEvent.BackupFileChosen -> event.uri?.let { uri ->
+                performBackupOperation(R.string.backup_read_failed) {
+                    val backup = backupRepository.read(uri).getOrThrow()
+                    setState { copy(backupToRestore = backup) }
+                }
+            }
+            is SettingsEvent.CancelRestoreBackup -> if (!state.value.isBackupBusy) {
+                setState { copy(backupToRestore = null) }
+            }
+            is SettingsEvent.ConfirmRestoreBackup -> state.value.backupToRestore?.let { backup ->
+                performBackupOperation(R.string.backup_restore_failed) {
+                    backupRepository.restore(backup).getOrThrow()
+                    setState { copy(backupToRestore = null) }
+                    loadSettingsFromCookies(preferencesRepository.instanceUrl.first(), preferencesRepository.frontend.first())
+                    setEffect { SettingsEffect.ShowSnackbar(application.getString(R.string.backup_restore_success)) }
+                }
+            }
+            is SettingsEvent.UpdateFrontend -> viewModelScope.launch { preferencesRepository.setFrontend(event.type) }
             is SettingsEvent.OpenUrl -> {
                 setEffect { SettingsEffect.NavigateToUrl(event.url) }
             }
             is SettingsEvent.UpdateInstanceUrl -> {
+                if (com.kaleedtc.nitterium.data.security.UrlPolicy.httpsUrl(event.url) == null) {
+                    setEffect { SettingsEffect.ShowSnackbar("Use an HTTPS instance URL without credentials") }
+                    return
+                }
                 viewModelScope.launch {
                     preferencesRepository.setInstanceUrl(event.url)
                 }
             }
             is SettingsEvent.AddCustomInstance -> {
+                if (com.kaleedtc.nitterium.data.security.UrlPolicy.httpsUrl(event.url) == null) {
+                    setEffect { SettingsEffect.ShowSnackbar("Use an HTTPS instance URL without credentials") }
+                    return
+                }
                 viewModelScope.launch {
                     preferencesRepository.addCustomInstance(event.url)
                     // Optionally set it as current
@@ -141,9 +157,9 @@ class SettingsViewModel(
             is SettingsEvent.RemoveCustomInstance -> {
                 viewModelScope.launch {
                     preferencesRepository.removeCustomInstance(event.url)
-                    // If the current URL is removed, fallback to nitter.net
+                    // If the current URL is removed, fall back to the default instance.
                     if (state.value.instanceUrl == event.url) {
-                        preferencesRepository.setInstanceUrl("https://nitter.net")
+                        preferencesRepository.setInstanceUrl("https://xitter.cf")
                     }
                 }
             }
@@ -182,28 +198,32 @@ class SettingsViewModel(
                     preferencesRepository.setDarkTheme(event.isDark)
                 }
             }
-            is SettingsEvent.UpdateInstanceSetting -> {
-                val url = state.value.instanceUrl
-                val cookieManager = CookieManager.getInstance()
-                val cookieValue = if (event.value) "on" else "off"
-                val cookieString = "${event.key}=$cookieValue; Path=/; SameSite=Lax"
-                cookieManager.setCookie(url, cookieString)
-                cookieManager.flush()
-
-                // Update local state immediately
-                val current = _instanceSettings.value
-                val newSettings = when (event.key) {
-                    "hideTweetStats" -> current.copy(hideTweetStats = event.value)
-                    "hideBanner" -> current.copy(hideBanner = event.value)
-                    "hidePins" -> current.copy(hidePins = event.value)
-                    "hlsPlayback" -> current.copy(hlsPlayback = event.value)
-                    "infiniteScroll" -> current.copy(infiniteScroll = event.value)
-                    "proxyVideos" -> current.copy(proxyVideos = event.value)
-                    "muteVideos" -> current.copy(muteVideos = event.value)
-                    "autoplayGifs" -> current.copy(autoplayGifs = event.value)
-                    else -> current
+            is SettingsEvent.UpdateShowReleaseNotes -> {
+                viewModelScope.launch {
+                    preferencesRepository.setShowReleaseNotes(event.enabled)
                 }
-                _instanceSettings.value = newSettings
+            }
+            is SettingsEvent.UpdateInstanceSetting -> {
+                val updated = InstanceSettingsCookies.update(_instanceSettings.value, event.key, event.value) ?: return
+                if (instanceOptions.setOption(state.value.instanceUrl, state.value.frontend, event.key, event.value)) {
+                    _instanceSettings.value = updated
+                }
+            }
+        }
+    }
+
+    private fun performBackupOperation(failureMessage: Int, action: suspend () -> Unit) {
+        if (state.value.isBackupBusy) return
+        setState { copy(isBackupBusy = true) }
+        viewModelScope.launch {
+            try {
+                action()
+            } catch (error: kotlinx.coroutines.CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                setEffect { SettingsEffect.ShowSnackbar(application.getString(failureMessage)) }
+            } finally {
+                setState { copy(isBackupBusy = false) }
             }
         }
     }

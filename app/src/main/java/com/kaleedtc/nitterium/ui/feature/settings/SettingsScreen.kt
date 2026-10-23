@@ -1,6 +1,12 @@
 package com.kaleedtc.nitterium.ui.feature.settings
 
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import com.kaleedtc.nitterium.data.model.BackupScope
+import java.time.LocalDate
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,7 +32,6 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -46,6 +51,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
+import com.kaleedtc.nitterium.data.frontend.FrontendType
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -66,6 +72,8 @@ import com.kaleedtc.nitterium.R
 import androidx.core.net.toUri
 
 import android.os.Build
+import androidx.compose.material.icons.filled.VolunteerActivism
+import androidx.compose.material3.ExposedDropdownMenu
 
 @Composable
 fun SettingsScreen(
@@ -73,10 +81,30 @@ fun SettingsScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    var exportScope by rememberSaveable { mutableStateOf(BackupScope.EVERYTHING) }
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        viewModel.onEvent(SettingsEvent.BackupDestinationChosen(uri, exportScope))
+    }
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        viewModel.onEvent(SettingsEvent.BackupFileChosen(uri))
+    }
 
     LaunchedEffect(viewModel.effect) {
         viewModel.effect.collect { effect ->
             when (effect) {
+                is SettingsEffect.LaunchBackupExport -> {
+                    exportScope = effect.scope
+                    val part = when (effect.scope) {
+                        BackupScope.SUBSCRIPTIONS -> "subscriptions"
+                        BackupScope.SUBSCRIPTIONS_AND_GROUPS -> "subscriptions-groups"
+                        BackupScope.SETTINGS -> "settings"
+                        BackupScope.EVERYTHING -> "complete"
+                    }
+                    exportLauncher.launch("Nitterium-$part-${LocalDate.now()}.json")
+                }
+                is SettingsEffect.LaunchBackupImport -> importLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
+                is SettingsEffect.ShowSnackbar -> snackbarHostState.showSnackbar(effect.message)
                 is SettingsEffect.NavigateToUrl -> {
                     val intent = Intent(Intent.ACTION_VIEW, effect.url.toUri())
                     context.startActivity(intent)
@@ -87,15 +115,16 @@ fun SettingsScreen(
 
     SettingsContent(
         state = state,
-        onEvent = viewModel::onEvent
+        onEvent = viewModel::onEvent,
+        snackbarHostState = snackbarHostState
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsContent(
     state: SettingsState,
-    onEvent: (SettingsEvent) -> Unit
+    onEvent: (SettingsEvent) -> Unit,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
 ) {
     val scrollBehavior =
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
@@ -106,7 +135,8 @@ fun SettingsContent(
     var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
     val tabs = listOf(
         stringResource(R.string.app_settings),
-        stringResource(R.string.instance_options)
+        stringResource(R.string.instance_options),
+        stringResource(R.string.backup_tab)
     )
 
     Scaffold(
@@ -114,6 +144,7 @@ fun SettingsContent(
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         contentWindowInsets = ScaffoldDefaults.contentWindowInsets.exclude(WindowInsets.navigationBars),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             MediumTopAppBar(
                 title = { Text(stringResource(R.string.nav_settings)) },
@@ -143,14 +174,18 @@ fun SettingsContent(
                     when (selectedTabIndex) {
                         0 -> AppSettingsList(state, onEvent)
                         1 -> InstanceSettingsList(state, onEvent)
+                        2 -> BackupSettings(state, onEvent)
                     }
                 }
             }
         }
     }
+
+    state.backupToRestore?.let { backup ->
+        RestoreBackupDialog(backup, state.isBackupBusy, onEvent)
+    }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppSettingsList(
     state: SettingsState,
@@ -274,6 +309,31 @@ fun AppSettingsList(
                 }
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+            var frontendExpanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(expanded = frontendExpanded, onExpandedChange = { frontendExpanded = it }) {
+                val frontendLabel = when (state.frontendMode) {
+                    FrontendType.AUTO -> stringResource(R.string.frontend_auto)
+                    FrontendType.NITTER -> "Nitter"
+                    FrontendType.TEAPOT -> "Teapot"
+                }
+                OutlinedTextField(
+                    value = frontendLabel,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(stringResource(R.string.frontend_type)) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(frontendExpanded) },
+                    modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                )
+                ExposedDropdownMenu(expanded = frontendExpanded, onDismissRequest = { frontendExpanded = false }) {
+                    FrontendType.entries.forEach { type ->
+                        DropdownMenuItem(
+                            text = { Text(if (type == FrontendType.AUTO) stringResource(R.string.frontend_auto) else if (type == FrontendType.TEAPOT) "Teapot" else "Nitter") },
+                            onClick = { onEvent(SettingsEvent.UpdateFrontend(type)); frontendExpanded = false }
+                        )
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(24.dp))
         }
 
@@ -410,6 +470,20 @@ fun AppSettingsList(
                 label = stringResource(R.string.version, state.appVersion),
                 icon = Icons.Default.Info
             )
+            SettingsSwitch(
+                label = stringResource(R.string.whats_new_show_after_updates),
+                checked = state.showReleaseNotesAfterUpdates,
+                onCheckedChange = { onEvent(SettingsEvent.UpdateShowReleaseNotes(it)) }
+            )
+        }
+
+        item {
+            val appUrl = stringResource(R.string.donate_url)
+            SettingsLink(
+                label = stringResource(R.string.donate_page),
+                icon = Icons.Default.VolunteerActivism,
+                onClick = { onEvent(SettingsEvent.OpenUrl(appUrl)) }
+            )
         }
 
         item {
@@ -519,25 +593,47 @@ fun InstanceSettingsList(
 
         item {
             Text(
+                text = stringResource(R.string.appearance),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            SettingsSwitch(
+                label = stringResource(R.string.square_avatars),
+                checked = state.instanceSettings.squareAvatars ?: (state.frontend == FrontendType.TEAPOT),
+                onCheckedChange = { onEvent(SettingsEvent.UpdateInstanceSetting("squareAvatars", it)) }
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        item {
+            Text(
                 text = stringResource(R.string.media_playback),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(8.dp))
 
+            if (state.frontend == FrontendType.TEAPOT) {
+                SettingsSwitch(
+                    label = stringResource(R.string.hls_playback),
+                    checked = state.instanceSettings.teapotHlsPlayback ?: false,
+                    onCheckedChange = { onEvent(SettingsEvent.UpdateInstanceSetting("teapotHlsPlayback", it)) }
+                )
+            }
             SettingsSwitch(
-                label = stringResource(R.string.hls_playback),
+                label = stringResource(if (state.frontend == FrontendType.TEAPOT) R.string.mp4_playback else R.string.hls_playback),
                 checked = state.instanceSettings.hlsPlayback,
                 onCheckedChange = { onEvent(SettingsEvent.UpdateInstanceSetting("hlsPlayback", it)) }
             )
             SettingsSwitch(
-                label = stringResource(R.string.proxy_videos),
+                label = stringResource(if (state.frontend == FrontendType.TEAPOT) R.string.proxy_media else R.string.proxy_videos),
                 checked = state.instanceSettings.proxyVideos,
                 onCheckedChange = { onEvent(SettingsEvent.UpdateInstanceSetting("proxyVideos", it)) },
                 icon = {
                     SettingsInfoIcon(
-                        title = stringResource(R.string.proxy_videos),
-                        description = stringResource(R.string.proxy_videos_description)
+                        title = stringResource(if (state.frontend == FrontendType.TEAPOT) R.string.proxy_media else R.string.proxy_videos),
+                        description = stringResource(if (state.frontend == FrontendType.TEAPOT) R.string.proxy_media_description else R.string.proxy_videos_description)
                     )
                 }
             )
