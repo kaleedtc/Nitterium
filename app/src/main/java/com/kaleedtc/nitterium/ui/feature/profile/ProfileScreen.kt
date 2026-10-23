@@ -1,7 +1,5 @@
 package com.kaleedtc.nitterium.ui.feature.profile
 
-import android.annotation.SuppressLint
-import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
@@ -12,12 +10,8 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -36,6 +30,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kaleedtc.nitterium.ui.common.GroupAssignmentDialog
+import com.kaleedtc.nitterium.ui.common.SubscriptionActionButton
+import androidx.compose.ui.platform.LocalResources
 import com.kaleedtc.nitterium.ui.common.LocalFullScreenMode
 import com.kaleedtc.nitterium.ui.common.NitterWebView
 import com.kaleedtc.nitterium.ui.common.ErrorScreen
@@ -43,32 +40,26 @@ import com.kaleedtc.nitterium.ui.common.NoInternetScreen
 import androidx.compose.ui.res.stringResource
 import com.kaleedtc.nitterium.R
 
-class ProfileJsInterface(private val onAvatarFound: (String) -> Unit) {
-    @JavascriptInterface
-    @Suppress("unused")
-    fun postAvatarUrl(url: String) {
-        onAvatarFound(url)
-    }
-}
-
 @Composable
 fun ProfileScreen(
     username: String,
     isDarkTheme: Boolean,
     onNavigateBack: () -> Unit,
-    onNavigateToSettings: () -> Unit,
+    onSwitchInstance: () -> Unit,
     viewModel: ProfileViewModel
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val resources = LocalResources.current
 
     LaunchedEffect(username) {
         viewModel.onEvent(ProfileEvent.LoadProfile(username))
     }
 
-    LaunchedEffect(viewModel.effect) {
+    LaunchedEffect(viewModel.effect, resources) {
         viewModel.effect.collect { effect ->
             when (effect) {
+                is ProfileEffect.ShowMessage -> snackbarHostState.showSnackbar(resources.getString(effect.resourceId))
                 is ProfileEffect.ShowSnackbar -> snackbarHostState.showSnackbar(effect.message)
                 is ProfileEffect.NavigateBack -> onNavigateBack()
             }
@@ -81,12 +72,10 @@ fun ProfileScreen(
         onEvent = viewModel::onEvent,
         snackbarHostState = snackbarHostState,
         onNavigateBack = onNavigateBack,
-        onNavigateToSettings = onNavigateToSettings
+        onSwitchInstance = onSwitchInstance
     )
 }
 
-@SuppressLint("JavascriptInterface")
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileContent(
     state: ProfileState,
@@ -94,16 +83,22 @@ fun ProfileContent(
     onEvent: (ProfileEvent) -> Unit,
     snackbarHostState: SnackbarHostState,
     onNavigateBack: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onSwitchInstance: () -> Unit
 ) {
     var webView: WebView? by remember { mutableStateOf(null) }
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val isFullScreen = LocalFullScreenMode.current.value
 
-    val jsInterface = remember { 
-        ProfileJsInterface { url -> 
-            onEvent(ProfileEvent.OnAvatarFound(url)) 
-        } 
+
+    state.groupAssignment?.let { subscription ->
+        GroupAssignmentDialog(
+            subscription = subscription,
+            allGroups = state.groups,
+            isSubscribed = state.groupAssignmentIsSubscribed,
+            isSaving = state.isSavingGroups,
+            onDismiss = { onEvent(ProfileEvent.DismissGroups) },
+            onConfirm = { onEvent(ProfileEvent.SaveGroups(it)) }
+        )
     }
 
     if (state.showUnsubscribeDialog) {
@@ -156,15 +151,12 @@ fun ProfileContent(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            if (!state.isError && !isFullScreen) {
-                FloatingActionButton(
-                    onClick = { onEvent(ProfileEvent.ToggleSubscription(state.username)) }
-                ) {
-                    Icon(
-                        imageVector = if (state.isSubscribed) Icons.Filled.PersonRemove else Icons.Filled.PersonAdd,
-                        contentDescription = stringResource(R.string.subscribe)
-                    )
-                }
+            if (state.username.isNotBlank() && !state.isError && !isFullScreen) {
+                SubscriptionActionButton(
+                    isSubscribed = state.isSubscribed,
+                    onClick = { onEvent(ProfileEvent.ToggleSubscription(state.username)) },
+                    onManageGroups = { onEvent(ProfileEvent.EditGroups) }
+                )
             }
         }
     ) { innerPadding ->
@@ -176,15 +168,19 @@ fun ProfileContent(
             } else if (state.currentUrl.isNotEmpty()) {
                 if (state.isError) {
                     ErrorScreen(
-                        message = stringResource(R.string.failed_to_load_profile),
+                        message = state.errorMessage ?: stringResource(R.string.failed_to_load_profile),
                         onRetry = {
                             onEvent(ProfileEvent.Refresh)
                         },
-                        onSwitchInstance = onNavigateToSettings
+                        onSwitchInstance = onSwitchInstance
                     )
                 } else {
                     NitterWebView(
                         url = state.currentUrl,
+                        selectedInstanceUrl = state.selectedInstanceUrl,
+                        onAvatarFound = { page, avatar -> onEvent(ProfileEvent.OnAvatarFound(page, avatar)) },
+                        frontend = state.frontend,
+                        onFrontendDetected = { url, type -> onEvent(ProfileEvent.FrontendDetected(url, type)) },
                         isTrueBlack = state.isTrueBlack,
                         isSiteHeaderEnabled = state.isSiteHeaderEnabled,
                         isBlockDirectXEnabled = state.isBlockDirectXEnabled,
@@ -198,39 +194,11 @@ fun ProfileContent(
                             }
                         },
                         onPageStarted = { onEvent(ProfileEvent.OnPageStarted(it)) },
-                        onPageFinished = { url, view ->
+                        onPageFinished = { url, _ ->
                             onEvent(ProfileEvent.OnPageFinished(url))
-                            view.evaluateJavascript(
-                                """
-                                (function() {
-                                    var url = null;
-                                    var avatar = document.querySelector('a.profile-card-avatar');
-                                    if (avatar) {
-                                         url = avatar.href; 
-                                    }
-                                    if (!url) {
-                                        var mainTweetAvatar = document.querySelector('.main-tweet .tweet-avatar img');
-                                        if (mainTweetAvatar) url = mainTweetAvatar.src;
-                                    }
-                                    if (!url) {
-                                        var anyAvatar = document.querySelector('.tweet-avatar img');
-                                        if (anyAvatar) url = anyAvatar.src;
-                                    }
-                                    if (!url && window.location.pathname.indexOf('/status/') === -1) {
-                                        var meta = document.querySelector('meta[property="og:image"]');
-                                        if (meta) url = meta.content;
-                                    }
-                                    if (url && window.AndroidProfile) {
-                                        AndroidProfile.postAvatarUrl(url);
-                                    }
-                                })()
-                                """.trimIndent(),
-                                null
-                            )
                         },
                         onPageError = { code, desc -> onEvent(ProfileEvent.OnPageError(code, desc)) },
                         onWebViewCreated = { 
-                            it.addJavascriptInterface(jsInterface, "AndroidProfile")
                             webView = it 
                         }
                     )

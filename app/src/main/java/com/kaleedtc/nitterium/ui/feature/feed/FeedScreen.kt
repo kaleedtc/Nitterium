@@ -17,7 +17,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -51,7 +50,7 @@ import com.kaleedtc.nitterium.ui.common.NoInternetScreen
 fun FeedScreen(
     isDarkTheme: Boolean,
     onNavigateBack: () -> Unit,
-    onNavigateToSettings: () -> Unit,
+    onSwitchInstance: () -> Unit,
     viewModel: FeedViewModel
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -70,19 +69,18 @@ fun FeedScreen(
         isDarkTheme = isDarkTheme,
         onEvent = viewModel::onEvent,
         snackbarHostState = snackbarHostState,
-        onNavigateToSettings = onNavigateToSettings,
+        onSwitchInstance = onSwitchInstance,
         onNavigateBack = onNavigateBack
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedContent(
     state: FeedState,
     isDarkTheme: Boolean,
     onEvent: (FeedEvent) -> Unit,
     snackbarHostState: SnackbarHostState,
-    onNavigateToSettings: () -> Unit,
+    onSwitchInstance: () -> Unit,
     onNavigateBack: () -> Unit
 ) {
     var webView: WebView? by remember { mutableStateOf(null) }
@@ -145,15 +143,18 @@ fun FeedContent(
             } else if (state.currentUrl.isNotEmpty()) {
                 if (state.isError) {
                     ErrorScreen(
-                        message = stringResource(R.string.failed_to_load_content),
+                        message = state.errorMessage ?: stringResource(R.string.failed_to_load_content),
                         onRetry = {
                             onEvent(FeedEvent.Refresh)
                         },
-                        onSwitchInstance = onNavigateToSettings
+                        onSwitchInstance = onSwitchInstance
                     )
                 } else {
                     NitterWebView(
                         url = state.currentUrl,
+                        selectedInstanceUrl = state.selectedInstanceUrl,
+                        frontend = state.frontend,
+                        onFrontendDetected = { url, type -> onEvent(FeedEvent.FrontendDetected(url, type)) },
                         isTrueBlack = state.isTrueBlack,
                         isSiteHeaderEnabled = state.isSiteHeaderEnabled,
                         isBlockDirectXEnabled = state.isBlockDirectXEnabled,
@@ -171,10 +172,10 @@ fun FeedContent(
                         onPageFinished = { url, _ ->
                             onEvent(FeedEvent.OnPageFinished(url))
                         },
-                        onPageError = { code, _ -> 
+                        onPageError = { code, description ->
                             // Only trigger error if main frame failed
                             if (code != -2 && code != -10) { // ignore unknown host and timeout errors that are sometimes flaky
-                                onEvent(FeedEvent.OnPageError) 
+                                onEvent(FeedEvent.OnPageError(description.takeIf { code == 503 }))
                             }
                         },
                         onWebViewCreated = { webView = it }
