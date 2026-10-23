@@ -7,7 +7,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.CookieManager
-import android.webkit.JavascriptInterface
+import com.kaleedtc.nitterium.data.repository.CookieInstanceOptionsStore
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -35,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,14 +57,20 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.kaleedtc.nitterium.data.frontend.FrontendType
+import com.kaleedtc.nitterium.data.frontend.FrontendAdapter
+import com.kaleedtc.nitterium.data.frontend.InstanceSettingsCookies
 import java.net.URI
-import java.net.URL
+import com.kaleedtc.nitterium.data.security.UrlPolicy
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun NitterWebView(
     url: String,
+    selectedInstanceUrl: String,
     isTrueBlack: Boolean,
     isSiteHeaderEnabled: Boolean,
     isBlockDirectXEnabled: Boolean,
@@ -73,10 +80,13 @@ fun NitterWebView(
     onPageError: (Int, String) -> Unit,
     onWebViewCreated: (WebView) -> Unit,
     modifier: Modifier = Modifier,
+    frontend: FrontendType = FrontendType.NITTER,
+    onFrontendDetected: (String, FrontendType) -> Unit = { _, _ -> },
     isRefreshing: Boolean = false,
     isProfileView: Boolean = false,
     isFeedView: Boolean = false,
     onRefresh: () -> Unit = {},
+    onAvatarFound: (String, String) -> Unit = { _, _ -> },
 ) {
     // 0. State for Image Viewer
     var clickedImageState by remember { mutableStateOf<Pair<List<String>, Int>?>(null) }
@@ -90,6 +100,7 @@ fun NitterWebView(
 
     var longPressedUrl by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
+    val positionScript = remember { context.assets.open("reading-position.js").bufferedReader().use { it.readText() } }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -132,6 +143,26 @@ fun NitterWebView(
                 --border-color: $borderHex !important;
             }
             body { 
+                --bg_color: $bgHex !important;
+                --bg_panel: $surfaceHex !important;
+                --bg_elements: $surfaceHex !important;
+                --bg_overlays: $surfaceHex !important;
+                --bg_hover: $surfaceHex !important;
+                --fg_color: $textHex !important;
+                --fg_dark: $textHex !important;
+                --fg_nav: $textHex !important;
+                --fg_faded: $textVariantHex !important;
+                --grey: $textVariantHex !important;
+                --border_grey: $borderHex !important;
+                --dark_grey: $borderHex !important;
+                --darker_grey: $borderHex !important;
+                --darkest_grey: $surfaceHex !important;
+                --accent: $primaryHex !important;
+                --accent_light: $primaryHex !important;
+                --accent_border: $borderHex !important;
+                --tab: $textVariantHex !important;
+                --tab_selected: $primaryHex !important;
+                --profile_stat: $textHex !important;
                 background-color: $bgHex !important; 
                 color: $textHex !important;
             }
@@ -225,12 +256,12 @@ fun NitterWebView(
             --panel-bg: #000000 !important;
         }
         body, .timeline-item, .reply, .card, .main-thread, .show-more, .more-replies, .header, .tabs { background-color: #000000 !important; }
+        body { --bg_color: #000000 !important; --bg_panel: #000000 !important; --bg_elements: #000000 !important; }
         """
     } else ""
 
     fun isProfileUrl(currentUrl: String?): Boolean {
-        if (currentUrl.isNullOrEmpty()) return false
-        return try {
+        return !currentUrl.isNullOrEmpty() && try {
             val uri = URI(currentUrl)
             val path = uri.path.trim('/')
             if (path.isEmpty()) return false
@@ -249,7 +280,18 @@ fun NitterWebView(
     }
 
     fun getSiteHeaderCss(currentUrl: String?): String {
-        if (isSiteHeaderEnabled) return ""
+        val isActuallyFeedRoot = isFeedView && currentUrl != null && try {
+            FrontendAdapter.sameOrigin(url, currentUrl) &&
+                URI(url).path.trimEnd('/') == URI(currentUrl).path.trimEnd('/')
+        } catch (_: Exception) {
+            false
+        }
+        // The native feed toolbar already identifies this timeline. Teapot renders
+        // a separate account-list heading outside the shared Nitter header classes.
+        val feedHeadingCss = if (isActuallyFeedRoot) {
+            ".multi-user-timeline > h2 { display: none !important; }"
+        } else ""
+        if (isSiteHeaderEnabled) return feedHeadingCss
 
         // Prioritize actual URL check. If the URL is a global-reserved page (like /search),
         // we always use strict CSS to hide the search bar, even if the screen context is "Profile".
@@ -261,23 +303,20 @@ fun NitterWebView(
             "nav, .site-header, .header, .search-header, .timeline-header, .search-bar, form[action*=\"search\"], .search-field, .search-panel"
         }
         
-        val isActuallyFeedRoot = isFeedView && currentUrl != null && try {
-            val reqPath = URI(url).path.trimEnd('/')
-            val curPath = URI(currentUrl).path.trimEnd('/')
-            reqPath == curPath || (curPath.isEmpty() && reqPath == "/")
-        } catch (_: Exception) {
-            false
-        }
-
         if (isActuallyFeedRoot) {
             css += ", .profile-card, .profile-tabs, .profile-banner, .profile-header, .timeline-header, ul.tab"
         }
 
-        return "$css { display: none !important; }"
+        return "$css { display: none !important; } $feedHeadingCss"
     }
 
     fun getJsInjection(currentUrl: String?): String {
         val headerCss = getSiteHeaderCss(currentUrl)
+        val instanceOptions = InstanceSettingsCookies.read(
+            runCatching { CookieManager.getInstance().getCookie(currentUrl ?: url).orEmpty() }.getOrDefault(""), frontend
+        )
+        val squareAvatars = instanceOptions.squareAvatars == true
+        val stickyProfile = instanceOptions.stickyProfile == true
         return """
             javascript:(function() {
                 function updateStyle(id, css) {
@@ -307,6 +346,14 @@ fun NitterWebView(
                 `);
 
                 function fixDirection() {
+                    // History snapshots and newly inserted posts may contain
+                    // avatar classes from before the instance options changed.
+                    document.querySelectorAll('img.avatar').forEach(function(el) {
+                        el.classList.toggle('round', ${!squareAvatars});
+                    });
+                    document.querySelectorAll('.profile-tab').forEach(function(el) {
+                        el.classList.toggle('sticky', $stickyProfile);
+                    });
                     var contentSelectors = [
                         '.tweet-content', '.quote-text', '.card-title', '.card-description',
                         '.reply-content', '.reply-text', '.tweet-text', '.comment-text'
@@ -372,7 +419,7 @@ fun NitterWebView(
                                 } else {
                                     imageLinks.push(target.href);
                                 }
-                                NitterAndroid.openGallery(JSON.stringify(imageLinks), clickedIndex);
+                                if (window.NitterAndroid) NitterAndroid.openGallery(JSON.stringify(imageLinks), clickedIndex);
                             }
                         }
                     }, true);
@@ -402,43 +449,56 @@ fun NitterWebView(
         """.trimIndent()
     }
 
-    val nitterThemeCookieValue = remember(darkTheme, isTrueBlack) {
-        when {
-            darkTheme && isTrueBlack -> "Twitter Black"
-            darkTheme -> "Twitter Dark"
-            else -> "Twitter"
-        }
+    val nitterThemeCookieValue = remember(frontend, darkTheme, isTrueBlack) {
+        FrontendAdapter.forType(frontend).themeCookie(darkTheme, isTrueBlack)
     }
 
+    val instanceOptions = remember { CookieInstanceOptionsStore() }
+
     val rendererGoneError = stringResource(R.string.renderer_gone_error)
+    val instanceUnavailableError = stringResource(R.string.instance_unavailable_error)
     val latestJsInjection by rememberUpdatedState { url: String? -> getJsInjection(url) }
+    val latestOnFrontendDetected by rememberUpdatedState(onFrontendDetected)
     val latestOnPageStarted by rememberUpdatedState(onPageStarted)
     val latestOnPageFinished by rememberUpdatedState(onPageFinished)
     val latestOnPageError by rememberUpdatedState(onPageError)
+    val latestInstance by rememberUpdatedState(selectedInstanceUrl)
+    val latestOnAvatarFound by rememberUpdatedState(onAvatarFound)
 
-    // Use an array to pass the boolean reference safely to the AndroidView factory closure
-    val blockDirectXState = remember { BooleanArray(1) }
-    blockDirectXState[0] = isBlockDirectXEnabled
+    // Request interception runs on a background thread.
+    val blockDirectXState = remember { AtomicBoolean(isBlockDirectXEnabled) }
+    blockDirectXState.set(isBlockDirectXEnabled)
+    val selectedInstanceState = remember { AtomicReference(selectedInstanceUrl) }
+    selectedInstanceState.set(selectedInstanceUrl)
+    val pageBridge = remember {
+        SecurePageBridge(
+            selectedInstance = { latestInstance },
+            blockDirectX = { blockDirectXState.get() },
+            onGallery = { urls, index -> clickedImageState = urls to index },
+            onLongPress = { longPressedUrl = it }
+        )
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
         var webViewRef by remember { mutableStateOf<WebView?>(null) }
         val webViewStateBundle = rememberSaveable(
             saver = Saver(
-            save = {
-                val bundle = Bundle()
-                webViewRef?.saveState(bundle)
-                bundle
-            },
-            restore = { it }
-        )) { Bundle() }
+                save = { saved ->
+                    Bundle(saved).also { bundle -> webViewRef?.saveReadingState(bundle) }
+                },
+                restore = { it }
+            )
+        ) { Bundle() }
 
         val lifecycleOwner = LocalLifecycleOwner.current
 
         // Re-inject theme when it changes to ensure it's always up to date
         // even without a page reload (e.g. when switching system theme).
-        LaunchedEffect(currentThemeCss, trueBlackCss, darkTheme) {
+        LaunchedEffect(currentThemeCss, trueBlackCss, darkTheme, frontend, isSiteHeaderEnabled) {
             webViewRef?.let { wv ->
-                wv.evaluateJavascript(latestJsInjection(wv.url), null)
+                if (UrlPolicy.sameOrigin(latestInstance, wv.url)) {
+                    wv.evaluateJavascript(latestJsInjection(wv.url), null)
+                }
             }
         }
 
@@ -447,7 +507,6 @@ fun NitterWebView(
                 when (event) {
                     Lifecycle.Event.ON_PAUSE -> webViewRef?.onPause()
                     Lifecycle.Event.ON_RESUME -> webViewRef?.onResume()
-                    Lifecycle.Event.ON_DESTROY -> webViewRef?.destroy()
                     else -> Unit
                 }
             }
@@ -455,19 +514,28 @@ fun NitterWebView(
             onDispose {
                 lifecycleOwner.lifecycle.removeObserver(observer)
                 webViewRef?.let { wv ->
-                    wv.removeJavascriptInterface("NitterAndroid")
-                    wv.removeJavascriptInterface("AndroidSearch")
-                    wv.removeJavascriptInterface("AndroidProfile")
+                    // Save while the browser is still alive. Navigation may request
+                    // the saveable state after this composition has been disposed.
+                    wv.saveReadingState(webViewStateBundle)
+                    pageBridge.close()
                     (wv.parent as? ViewGroup)?.removeView(wv)
                     wv.removeAllViews()
                     wv.destroy()
                 }
+                webViewRef = null
             }
         }
 
-        LaunchedEffect(url, webViewRef) {
+        LaunchedEffect(url, selectedInstanceUrl, webViewRef) {
             val wv = webViewRef
             if (wv != null && url.isNotEmpty()) {
+                if (!UrlPolicy.sameOrigin(latestInstance, url)) {
+                    pageBridge.close()
+                    wv.stopLoading()
+                    latestOnPageError(-1, "Blocked navigation outside the selected instance")
+                    return@LaunchedEffect
+                }
+                instanceOptions.ensureProxyDefaults(url)
                 val currentUrl = wv.url
                 // Only load if the current URL is well-defined and different from the target.
                 // If it is null or about:blank, it means the WebView is either starting fresh 
@@ -507,6 +575,8 @@ fun NitterWebView(
                         domStorageEnabled = true
                         cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
                         mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                        allowFileAccess = false
+                        allowContentAccess = false
                         val defaultUA = userAgentString
                         userAgentString = defaultUA.replace("; wv", "")
                             .replace(Regex("Version/\\d+\\.\\d+\\s+"), "")
@@ -515,13 +585,6 @@ fun NitterWebView(
                     // Enable third party cookies for better instance compatibility
                     val cookieManager = CookieManager.getInstance()
                     cookieManager.setAcceptThirdPartyCookies(this, true)
-
-                    addJavascriptInterface(NitterInterface(
-                        onOpenGallery = { urls, index ->
-                            clickedImageState = Pair(urls, index)
-                        },
-                        onLongPress = { longPressedUrl = it }
-                    ), "NitterAndroid")
 
                     setOnLongClickListener { v ->
                         val result = (v as WebView).hitTestResult
@@ -534,26 +597,97 @@ fun NitterWebView(
                                 } catch (_: Exception) {
                                     urlResult
                                 }
-                                longPressedUrl = finalUrl
+                                if (!UrlPolicy.sameOrigin(latestInstance, v.url)) return@setOnLongClickListener false
+                                longPressedUrl = UrlPolicy.httpsUrl(finalUrl)?.toString() ?: return@setOnLongClickListener false
                                 return@setOnLongClickListener true
                             }
                         }
                         false
                     }
 
+                    // Leave HTTP error documents in the WebView so browser-verification
+                    // scripts and redirects can finish using the default HTTP handling.
                     webViewClient = object : WebViewClient() {
                         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                             super.onPageStarted(view, url, favicon)
+                            pageBridge.close()
+                            clickedImageState = null
+                            longPressedUrl = null
+                            if (!UrlPolicy.sameOrigin(latestInstance, url)) {
+                                view?.stopLoading()
+                                latestOnPageError(-1, "Blocked navigation outside the selected instance")
+                                return
+                            }
                             view?.alpha = 0f
                             url?.let { latestOnPageStarted(it) }
                         }
 
                         override fun onPageFinished(view: WebView?, url: String?) {
                             super.onPageFinished(view, url)
-                            if (view != null && url != null) {
+                            if (view == null || url == null || view.url != url ||
+                                !UrlPolicy.sameOrigin(latestInstance, url)) return
+                            pageBridge.attach(view, url)
+                            view.evaluateJavascript("""
+                                (function() {
+                                    // A verification redirect may have replaced the finished document.
+                                    if (window.location.href !== ${org.json.JSONObject.quote(url)}) return null;
+                                    var errors = Array.from(document.querySelectorAll('.error-panel, .error-message, .error'))
+                                        .filter(function(element) { return !element.closest('.timeline-item, .main-tweet'); });
+                                    if (!document.querySelector('.timeline-item, .main-tweet') && document.body) {
+                                        errors.push(document.body);
+                                    }
+                                    var unavailable = errors.find(function(element) {
+                                        var text = (element.innerText || '').replace(/\s+/g, ' ');
+                                        return /instance has been rate limited|instance has no auth tokens,? or is fully rate limited/i.test(text);
+                                    });
+                                    if (unavailable) return {instanceUnavailable: (unavailable.innerText || '').trim()};
+                                    if (document.querySelector('link[href*="/css/clean.css"]')) return "TEAPOT";
+                                    if (document.querySelector('.timeline, .profile-card, link[href*="/css/style.css"]')) return "NITTER";
+                                    return null;
+                                })()
+                            """.trimIndent()) { detected ->
+                                if (view.url != url || !UrlPolicy.sameOrigin(latestInstance, url)) return@evaluateJavascript
+                                if (detected.startsWith('{')) {
+                                    val message = if (detected.length <= 65_536) runCatching {
+                                        org.json.JSONObject(detected).optString("instanceUnavailable").takeIf { it.isNotBlank() }
+                                    }.getOrNull() else instanceUnavailableError
+                                    if (message == null) return@evaluateJavascript
+                                    latestOnPageError(503, message)
+                                    return@evaluateJavascript
+                                }
+                                when (detected) {
+                                    "\"TEAPOT\"" -> latestOnFrontendDetected(url, FrontendType.TEAPOT)
+                                    "\"NITTER\"" -> latestOnFrontendDetected(url, FrontendType.NITTER)
+                                }
                                 latestOnPageFinished(url, view)
+                                // Read the main document directly; no avatar interface is exposed to frames.
+                                view.evaluateJavascript("""
+                                    (function() {
+                                        if (location.href !== ${org.json.JSONObject.quote(url)}) return null;
+                                        var avatar = document.querySelector('a.profile-card-avatar');
+                                        if (avatar) return avatar.href;
+                                        var image = document.querySelector('.main-tweet .tweet-avatar img, .tweet-avatar img');
+                                        if (image) return image.src;
+                                        var meta = document.querySelector('meta[property="og:image"]');
+                                        return location.pathname.indexOf('/status/') === -1 && meta ? meta.content : null;
+                                    })()
+                                """.trimIndent()) avatarResult@{ result ->
+                                    if (view.url != url || !UrlPolicy.sameOrigin(latestInstance, url) ||
+                                        result.length > 65_536 || !result.startsWith('"')) return@avatarResult
+                                    val value = runCatching { org.json.JSONTokener(result).nextValue() as? String }.getOrNull()
+                                    val avatar = UrlPolicy.mediaUrl(value, blockDirectXState.get()) ?: return@avatarResult
+                                    latestOnAvatarFound(url, avatar)
+                                }
                             }
-                            view?.evaluateJavascript(latestJsInjection(url)) {
+                            view.evaluateJavascript(latestJsInjection(url)) {
+                                if (view.url != url || !UrlPolicy.sameOrigin(latestInstance, url)) return@evaluateJavascript
+                                view.evaluateJavascript(positionScript, null)
+                                if (webViewStateBundle.containsKey("readingY")) {
+                                    val x = webViewStateBundle.getInt("readingX")
+                                    val y = webViewStateBundle.getInt("readingY")
+                                    webViewStateBundle.remove("readingY")
+                                    view.post { view.scrollTo(x, y) }
+                                }
                                 view.alpha = 1f
                             }
                         }
@@ -610,13 +744,15 @@ fun NitterWebView(
                             view: WebView?,
                             request: WebResourceRequest?
                         ): WebResourceResponse? {
-                            if (blockDirectXState[0]) {
+                            if (request?.isForMainFrame == true &&
+                                !UrlPolicy.sameOrigin(selectedInstanceState.get(), request.url.toString())) {
+                                return WebResourceResponse("text/plain", "UTF-8", 403, "Blocked",
+                                    mapOf("Cache-Control" to "no-store"), java.io.ByteArrayInputStream(ByteArray(0)))
+                            }
+                            if (blockDirectXState.get()) {
                                 val requestHost = request?.url?.host?.lowercase()
                                 if (requestHost != null) {
-                                    val isTwitterDomain =
-                                        requestHost == "twitter.com" || requestHost.endsWith(".twitter.com") ||
-                                                requestHost == "x.com" || requestHost.endsWith(".x.com") ||
-                                                requestHost == "twimg.com" || requestHost.endsWith(".twimg.com")
+                                    val isTwitterDomain = UrlPolicy.isXHost(requestHost)
 
                                     if (isTwitterDomain) {
                                         val emptyStream = java.io.ByteArrayInputStream(ByteArray(0))
@@ -642,34 +778,14 @@ fun NitterWebView(
                             view: WebView?,
                             request: WebResourceRequest?
                         ): Boolean {
-                            val requestUrl = request?.url ?: return false
-                            return try {
-                                val currentHost = URL(view?.url ?: url).host
-                                val requestHost = requestUrl.host
-
-                                val isInternalHost = requestHost == currentHost ||
-                                        (requestHost != null && currentHost != null &&
-                                                requestHost.endsWith(".$currentHost"))
-
-                                val urlString = requestUrl.toString().lowercase()
-                                val isImageUrl = urlString.contains(".jpg") ||
-                                        urlString.contains(".jpeg") ||
-                                        urlString.contains(".png") ||
-                                        urlString.contains(".gif") ||
-                                        urlString.contains(".webp") ||
-                                        requestUrl.path?.contains("/pic/") == true ||
-                                        requestHost?.contains("pbs.twimg.com") == true
-
-                                if (!isInternalHost && !isImageUrl) {
-                                    val intent = Intent(Intent.ACTION_VIEW, requestUrl)
-                                    context.startActivity(intent)
-                                    true
-                                } else {
-                                    false
-                                }
-                            } catch (_: Exception) {
-                                false
+                            val requestUrl = request?.url ?: return true
+                            val target = UrlPolicy.httpsUrl(requestUrl.toString()) ?: return true
+                            if (blockDirectXState.get() && UrlPolicy.isXHost(target.host)) return true
+                            if (UrlPolicy.sameOrigin(latestInstance, target.toString())) return false
+                            if (request.isForMainFrame && request.hasGesture()) {
+                                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, requestUrl)) }
                             }
+                            return true
                         }
                     }
 
@@ -697,9 +813,8 @@ fun NitterWebView(
                     onWebViewCreated(this)
                 }
 
-                if (!webViewStateBundle.isEmpty) {
-                    webView.restoreState(webViewStateBundle)
-                } else if (url.isNotEmpty()) {
+                if (url.isNotEmpty() && UrlPolicy.sameOrigin(latestInstance, url)) {
+                    instanceOptions.ensureProxyDefaults(url)
                     val cookieManager = CookieManager.getInstance()
                     cookieManager.setAcceptCookie(true)
                     try {
@@ -709,7 +824,19 @@ fun NitterWebView(
                         )
                         cookieManager.flush()
                     } catch (_: Exception) {}
-                    webView.loadUrl(url)
+                }
+                // A nonempty bundle can contain scroll coordinates without valid
+                // browser history (for example if the page was still starting).
+                val restored = webView.restoreState(webViewStateBundle)
+                val safeHistory = restored != null && (0 until restored.size).all {
+                    UrlPolicy.sameOrigin(latestInstance, restored.getItemAtIndex(it).url)
+                }
+                if (!safeHistory) {
+                    webView.stopLoading()
+                    webView.clearHistory()
+                    if (restored != null) webViewStateBundle.clear()
+                    if (url.isNotEmpty() && UrlPolicy.sameOrigin(latestInstance, url)) webView.loadUrl(url)
+                    else if (url.isNotEmpty()) latestOnPageError(-1, "Invalid instance URL")
                 }
 
                 webViewRef = webView
@@ -718,6 +845,9 @@ fun NitterWebView(
             },
             update = { swipeRefreshLayout ->
                 swipeRefreshLayout.isRefreshing = isRefreshing
+                swipeRefreshLayout.setBackgroundColor(backgroundColor.toArgb())
+                swipeRefreshLayout.setProgressBackgroundColorSchemeColor(surfaceColor.toArgb())
+                swipeRefreshLayout.setColorSchemeColors(primaryColor.toArgb())
                 var webView: WebView? = null
                 for (i in 0 until swipeRefreshLayout.childCount) {
                     val child = swipeRefreshLayout.getChildAt(i)
@@ -732,7 +862,7 @@ fun NitterWebView(
                     cookieManager.setAcceptCookie(true)
                     try {
                         val targetUrl = if (webView.url.isNullOrEmpty()) url else webView.url
-                        if (!targetUrl.isNullOrEmpty()) {
+                        if (!targetUrl.isNullOrEmpty() && UrlPolicy.sameOrigin(latestInstance, targetUrl)) {
                             cookieManager.setCookie(
                                 targetUrl,
                                 "theme=$nitterThemeCookieValue; Path=/; SameSite=Lax"
@@ -765,11 +895,13 @@ fun NitterWebView(
         // Image Viewer Overlay
         val currentImageState = clickedImageState
         if (currentImageState != null) {
-            ImageViewer(
-                imageUrls = currentImageState.first,
-                initialIndex = currentImageState.second,
-                onDismiss = { clickedImageState = null }
-            )
+            key(currentImageState) {
+                ImageViewer(
+                    imageUrls = currentImageState.first,
+                    initialIndex = currentImageState.second,
+                    onDismiss = { clickedImageState = null }
+                )
+            }
         }
 
         // Link Options Dialog
@@ -803,25 +935,11 @@ fun NitterWebView(
                     
                     if (isTweetUrl) {
                         ListItem(
-                            headlineContent = { Text(shareContentStr) },
                             modifier = Modifier.clickable {
-                                val jsCode = """
-                                    (function() {
-                                        var links = document.querySelectorAll('a');
-                                        for (var i = 0; i < links.length; i++) {
-                                            if (links[i].href && links[i].href.includes('$urlToCopy')) {
-                                                var tweetItem = links[i].closest('.timeline-item, .main-thread, .reply');
-                                                if (tweetItem) {
-                                                    var contentEl = tweetItem.querySelector('.tweet-content');
-                                                    if (contentEl) return contentEl.innerText;
-                                                }
-                                            }
-                                        }
-                                        return '';
-                                    })()
-                                """.trimIndent()
-                                webViewRef?.evaluateJavascript(jsCode) { result ->
+                                val jsCode = shareTweetScript(urlToCopy)
+                                webViewRef?.takeIf { UrlPolicy.sameOrigin(latestInstance, it.url) }?.evaluateJavascript(jsCode) { result ->
                                     try {
+                                        require(result.length <= 65_536 && result.startsWith('"'))
                                         val extractedText = org.json.JSONObject("{\"t\":$result}").getString("t")
                                         if (extractedText.isNotEmpty()) {
                                             val intent = Intent(Intent.ACTION_SEND).apply {
@@ -838,10 +956,11 @@ fun NitterWebView(
                                 }
                                 longPressedUrl = null
                             }
-                        )
+                        ) {
+                            Text(shareContentStr)
+                        }
                     }
                     ListItem(
-                        headlineContent = { Text(stringResource(R.string.share_link)) },
                         modifier = Modifier.clickable {
                             val intent = Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"
@@ -850,41 +969,37 @@ fun NitterWebView(
                             context.startActivity(Intent.createChooser(intent, shareLinkTitle))
                             longPressedUrl = null
                         }
-                    )
+                    ) {
+                        Text(stringResource(R.string.share_link))
+                    }
                     ListItem(
-                        headlineContent = { Text(stringResource(R.string.copy_link)) },
                         modifier = Modifier.clickable {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             val clip = ClipData.newPlainText("Copied Link", urlToCopy)
+                            // The SDK's nullable getter and non-null setter do not form a writable Kotlin property.
+                            @Suppress("UsePropertyAccessSyntax")
                             clipboard.setPrimaryClip(clip)
                             Toast.makeText(context, linkCopiedMsg, Toast.LENGTH_SHORT).show()
                             longPressedUrl = null
                         }
-                    )
+                    ) {
+                        Text(stringResource(R.string.copy_link))
+                    }
                 }
             }
         }
     }
 }
 
-class NitterInterface(
-    private val onOpenGallery: (List<String>, Int) -> Unit,
-    private val onLongPress: (String) -> Unit
-) {
-    @Suppress("unused")
-    @JavascriptInterface
-    fun handleLongPress(url: String) {
-        onLongPress(url)
-    }
-
-    @Suppress("unused")
-    @JavascriptInterface
-    fun openGallery(urlsJson: String, initialIndex: Int) {
-        val urls = org.json.JSONArray(urlsJson)
-        val list = mutableListOf<String>()
-        for (i in 0 until urls.length()) {
-            list.add(urls.getString(i))
-        }
-        onOpenGallery(list, initialIndex)
+private fun WebView.saveReadingState(destination: Bundle) {
+    // Preserve a pending restoration if state is requested before the restored
+    // document has finished loading and applied its saved scroll coordinates.
+    if (destination.containsKey("readingY")) return
+    val snapshot = Bundle()
+    if (saveState(snapshot) != null) {
+        snapshot.putInt("readingX", scrollX)
+        snapshot.putInt("readingY", scrollY)
+        destination.clear()
+        destination.putAll(snapshot)
     }
 }
