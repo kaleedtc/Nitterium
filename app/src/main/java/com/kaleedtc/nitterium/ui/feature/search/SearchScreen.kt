@@ -1,10 +1,10 @@
 package com.kaleedtc.nitterium.ui.feature.search
 
-import android.annotation.SuppressLint
-import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,13 +22,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExpandedFullScreenSearchBar
+import androidx.compose.material3.SearchBarValue
+import androidx.compose.material3.rememberSearchBarState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -47,6 +46,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.rememberUpdatedState
+import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +57,10 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kaleedtc.nitterium.ui.common.GroupAssignmentDialog
+import com.kaleedtc.nitterium.ui.common.GroupAssignmentMenu
+import com.kaleedtc.nitterium.ui.common.SubscriptionActionButton
+import androidx.compose.ui.platform.LocalResources
 import com.kaleedtc.nitterium.ui.common.LocalFullScreenMode
 import com.kaleedtc.nitterium.ui.common.NitterWebView
 import com.kaleedtc.nitterium.ui.common.ErrorScreen
@@ -62,24 +68,17 @@ import com.kaleedtc.nitterium.ui.common.NoInternetScreen
 import androidx.compose.ui.res.stringResource
 import com.kaleedtc.nitterium.R
 
-class SearchJsInterface(private val onAvatarFound: (String) -> Unit) {
-    @JavascriptInterface
-    @Suppress("unused")
-    fun postAvatarUrl(url: String) {
-        onAvatarFound(url)
-    }
-}
-
 @Composable
 fun SearchScreen(
     initialUsername: String? = null,
     deepLinkUrl: String? = null,
     isDarkTheme: Boolean,
-    onNavigateToSettings: () -> Unit,
+    onSwitchInstance: () -> Unit,
     viewModel: SearchViewModel
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val resources = LocalResources.current
 
     LaunchedEffect(initialUsername) {
         if (initialUsername != null) {
@@ -93,9 +92,10 @@ fun SearchScreen(
         }
     }
 
-    LaunchedEffect(viewModel.effect) {
+    LaunchedEffect(viewModel.effect, resources) {
         viewModel.effect.collect { effect ->
             when (effect) {
+                is SearchEffect.ShowMessage -> snackbarHostState.showSnackbar(resources.getString(effect.resourceId))
                 is SearchEffect.ShowSnackbar -> snackbarHostState.showSnackbar(effect.message)
                 is SearchEffect.NavigateToUrl -> { /* Handled by WebView state */ }
             }
@@ -107,29 +107,63 @@ fun SearchScreen(
         isDarkTheme = isDarkTheme,
         onEvent = viewModel::onEvent,
         snackbarHostState = snackbarHostState,
-        onNavigateToSettings = onNavigateToSettings
+        onSwitchInstance = onSwitchInstance
     )
 }
 
-@SuppressLint("JavascriptInterface")
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchContent(
     state: SearchState,
     isDarkTheme: Boolean,
     onEvent: (SearchEvent) -> Unit,
     snackbarHostState: SnackbarHostState,
-    onNavigateToSettings: () -> Unit
+    onSwitchInstance: () -> Unit
 ) {
     var webView: WebView? by remember { mutableStateOf(null) }
     val focusManager = LocalFocusManager.current
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val isFullScreen = LocalFullScreenMode.current.value
 
-    val jsInterface = remember { 
-        SearchJsInterface { url -> 
-            onEvent(SearchEvent.OnAvatarFound(url)) 
-        } 
+    val searchBarState = rememberSearchBarState(
+        initialValue = if (state.isSearchBarActive) SearchBarValue.Expanded else SearchBarValue.Collapsed
+    )
+    val textFieldState = rememberTextFieldState(state.searchQuery)
+    val currentOnEvent by rememberUpdatedState(onEvent)
+
+    // Keep the state-based Material components connected to the feature's MVI state.
+    LaunchedEffect(state.searchQuery) {
+        if (textFieldState.text.toString() != state.searchQuery) {
+            textFieldState.setTextAndPlaceCursorAtEnd(state.searchQuery)
+        }
+    }
+    LaunchedEffect(textFieldState) {
+        snapshotFlow { textFieldState.text.toString() }
+            .distinctUntilChanged()
+            .collect { currentOnEvent(SearchEvent.UpdateQuery(it)) }
+    }
+    LaunchedEffect(state.isSearchBarActive) {
+        val target = if (state.isSearchBarActive) SearchBarValue.Expanded else SearchBarValue.Collapsed
+        if (searchBarState.targetValue != target) {
+            if (state.isSearchBarActive) searchBarState.animateToExpanded()
+            else searchBarState.animateToCollapsed()
+        }
+    }
+    LaunchedEffect(searchBarState) {
+        snapshotFlow { searchBarState.targetValue == SearchBarValue.Expanded }
+            .distinctUntilChanged()
+            .collect { currentOnEvent(SearchEvent.ToggleSearchBar(it)) }
+    }
+
+
+    state.groupAssignment?.let { subscription ->
+        GroupAssignmentDialog(
+            subscription = subscription,
+            allGroups = state.groups,
+            isSubscribed = state.groupAssignmentIsSubscribed,
+            isSaving = state.isSavingGroups,
+            onDismiss = { onEvent(SearchEvent.DismissGroups) },
+            onConfirm = { onEvent(SearchEvent.SaveGroups(it)) }
+        )
     }
 
     if (state.showUnsubscribeDialog && state.currentUsername != null) {
@@ -193,6 +227,9 @@ fun SearchContent(
                                 )
                             },
                             actions = {
+                                if (state.currentUsername != null && !state.isError) {
+                                    GroupAssignmentMenu(state.currentUsername) { onEvent(SearchEvent.EditGroups) }
+                                }
                                 IconButton(onClick = { onEvent(SearchEvent.ToggleSearchBar(true)) }) {
                                     Icon(Icons.Default.Search, contentDescription = stringResource(R.string.nav_search))
                                 }
@@ -204,14 +241,11 @@ fun SearchContent(
                 snackbarHost = { SnackbarHost(snackbarHostState) },
                 floatingActionButton = {
                     if (state.currentUsername != null && !state.isError && !state.isSearchBarActive && !isFullScreen) {
-                        FloatingActionButton(
-                            onClick = { onEvent(SearchEvent.ToggleSubscription(state.currentUsername)) }
-                        ) {
-                            Icon(
-                                imageVector = if (state.isSubscribed) Icons.Filled.PersonRemove else Icons.Filled.PersonAdd,
-                                contentDescription = stringResource(R.string.subscribe)
-                            )
-                        }
+                        SubscriptionActionButton(
+                            isSubscribed = state.isSubscribed,
+                            onClick = { onEvent(SearchEvent.ToggleSubscription(state.currentUsername)) },
+                            onManageGroups = { onEvent(SearchEvent.EditGroups) }
+                        )
                     }
                 }
             ) { innerPadding ->
@@ -219,16 +253,21 @@ fun SearchContent(
                 Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
                     if (state.isError) {
                         ErrorScreen(
+                            message = state.errorMessage ?: stringResource(R.string.failed_to_load_content),
                             onRetry = { 
                                 // Do NOT call webView.reload() here. The WebView might be dead/detached.
                                 // Resetting the error state will cause NitterWebView to be recomposed and created fresh.
                                 onEvent(SearchEvent.Refresh)
                             },
-                            onSwitchInstance = onNavigateToSettings
+                            onSwitchInstance = onSwitchInstance
                         )
                     } else {
                         NitterWebView(
                             url = state.currentUrl,
+                            selectedInstanceUrl = state.selectedInstanceUrl,
+                            onAvatarFound = { page, avatar -> onEvent(SearchEvent.OnAvatarFound(page, avatar)) },
+                            frontend = state.frontend,
+                            onFrontendDetected = { url, type -> onEvent(SearchEvent.FrontendDetected(url, type)) },
                             isTrueBlack = state.isTrueBlack,
                             isSiteHeaderEnabled = state.isSiteHeaderEnabled,
                             isBlockDirectXEnabled = state.isBlockDirectXEnabled,
@@ -242,39 +281,11 @@ fun SearchContent(
                                 }
                             },
                             onPageStarted = { onEvent(SearchEvent.OnPageStarted(it)) },
-                            onPageFinished = { url, view -> 
+                            onPageFinished = { url, _ ->
                                 onEvent(SearchEvent.OnPageFinished(url)) 
-                                view.evaluateJavascript(
-                                    """
-                                    (function() {
-                                        var url = null;
-                                        var avatar = document.querySelector('a.profile-card-avatar');
-                                        if (avatar) {
-                                             url = avatar.href; 
-                                        }
-                                        if (!url) {
-                                            var mainTweetAvatar = document.querySelector('.main-tweet .tweet-avatar img');
-                                            if (mainTweetAvatar) url = mainTweetAvatar.src;
-                                        }
-                                        if (!url) {
-                                            var anyAvatar = document.querySelector('.tweet-avatar img');
-                                            if (anyAvatar) url = anyAvatar.src;
-                                        }
-                                        if (!url && window.location.pathname.indexOf('/status/') === -1) {
-                                            var meta = document.querySelector('meta[property="og:image"]');
-                                            if (meta) url = meta.content;
-                                        }
-                                        if (url && window.AndroidSearch) {
-                                            AndroidSearch.postAvatarUrl(url);
-                                        }
-                                    })()
-                                    """.trimIndent(),
-                                    null
-                                )
                             },
                             onPageError = { code, desc -> onEvent(SearchEvent.OnPageError(code, desc)) },
                             onWebViewCreated = { 
-                                it.addJavascriptInterface(jsInterface, "AndroidSearch")
                                 webView = it 
                             }
                         )
@@ -325,69 +336,69 @@ fun SearchContent(
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
             ) {
-                val onActiveChange: (Boolean) -> Unit = { active -> onEvent(SearchEvent.ToggleSearchBar(active)) }
-                val colors1 = SearchBarDefaults.colors()
+                val colors = SearchBarDefaults.colors()
+                val inputField: @Composable () -> Unit = {
+                    SearchBarDefaults.InputField(
+                        textFieldState = textFieldState,
+                        searchBarState = searchBarState,
+                        onSearch = { query ->
+                            onEvent(SearchEvent.PerformSearch(query))
+                            focusManager.clearFocus()
+                        },
+                        placeholder = { Text(stringResource(R.string.search_placeholder)) },
+                        leadingIcon = {
+                            if (state.isSearchBarActive) {
+                                IconButton(onClick = { onEvent(SearchEvent.ToggleSearchBar(false)) }) {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                                }
+                            } else {
+                                Icon(Icons.Default.Search, contentDescription = stringResource(R.string.nav_search))
+                            }
+                        },
+                        trailingIcon = {
+                            if (textFieldState.text.isNotEmpty()) {
+                                IconButton(onClick = { textFieldState.setTextAndPlaceCursorAtEnd("") }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Clear")
+                                }
+                            }
+                        },
+                        colors = colors.inputFieldColors
+                    )
+                }
                 SearchBar(
-                    inputField = {
-                        SearchBarDefaults.InputField(
-                            query = state.searchQuery,
-                            onQueryChange = { q -> onEvent(SearchEvent.UpdateQuery(q)) },
-                            onSearch = { q ->
-                                        onEvent(SearchEvent.PerformSearch(q))
+                    state = searchBarState,
+                    inputField = inputField,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .windowInsetsPadding(SearchBarDefaults.windowInsets),
+                    colors = colors
+                )
+                ExpandedFullScreenSearchBar(
+                    state = searchBarState,
+                    inputField = inputField,
+                    colors = colors
+                ) {
+                    LazyColumn(
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        val query = textFieldState.text.toString()
+                        if (query.isNotEmpty()) {
+                            item {
+                                ListItem(
+                                    onClick = {
+                                        onEvent(SearchEvent.PerformSearch(query))
                                         focusManager.clearFocus()
                                     },
-                            expanded = state.isSearchBarActive,
-                            onExpandedChange = onActiveChange,
-                            enabled = true,
-                            placeholder = { Text(stringResource(R.string.search_placeholder)) },
-                            leadingIcon = {
-                                        if (state.isSearchBarActive) {
-                                            IconButton(onClick = { onEvent(SearchEvent.ToggleSearchBar(false)) }) {
-                                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-                                            }
-                                        } else {
-                                            Icon(Icons.Default.Search, contentDescription = stringResource(R.string.nav_search))
-                                        }
-                                    },
-                            trailingIcon = {
-                                        if (state.searchQuery.isNotEmpty()) {
-                                            IconButton(onClick = { onEvent(SearchEvent.UpdateQuery("")) }) {
-                                                Icon(Icons.Default.Close, contentDescription = "Clear")
-                                            }
-                                        }
-                                    },
-                            colors = colors1.inputFieldColors,
-                            interactionSource = null,
-                        )
-                    },
-                    expanded = state.isSearchBarActive,
-                    onExpandedChange = onActiveChange,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = if (state.isSearchBarActive) 0.dp else 16.dp),
-                    shape = SearchBarDefaults.inputFieldShape,
-                    colors = colors1,
-                    tonalElevation = SearchBarDefaults.TonalElevation,
-                    shadowElevation = SearchBarDefaults.ShadowElevation,
-                    windowInsets = SearchBarDefaults.windowInsets,
-                    content = {
-                        LazyColumn(
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            if (state.searchQuery.isNotEmpty()) {
-                                item {
-                                    ListItem(
-                                        headlineContent = { Text(stringResource(R.string.search_for, state.searchQuery)) },
-                                        leadingContent = { Icon(Icons.Default.Search, null) },
-                                        modifier = Modifier.clickable {
-                                            onEvent(SearchEvent.PerformSearch(state.searchQuery))
-                                            focusManager.clearFocus()
-                                        }
-                                    )
+                                    leadingContent = { Icon(Icons.Default.Search, null) }
+                                ) {
+                                    Text(stringResource(R.string.search_for, query))
                                 }
                             }
                         }
-                    },
-                )
+                    }
+                }
             }
         }
 
