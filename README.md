@@ -21,6 +21,12 @@
 ### 🤔 Why this?
 While browsing Nitter on Android, I needed a way to subscribe to accounts I was interested in following, along with some customization options. That led to the creation of this app!
 
+### How it works
+
+Nitterium loads pages from your selected Nitter or Teapot instance in an Android WebView, much like browsing the site. Combined feeds use the instance's own timeline pages. The app does not perform background crawling or bulk scraping of tweets.
+
+To support its native features, Nitterium reads parts of the pages you open, such as avatar URLs, image links, and error messages. It also keeps local page snapshots to restore your reading position. Subscriptions and groups are managed locally on your device.
+
 > [!Important]
 > - Nitterium depends on independently operated Nitter and Teapot instances. Availability, supported features, and feed limits vary between instances. If one stops working or becomes rate limited, try another.
 > - Subscriptions and groups are stored on your device. Browsing requests go to the instance you choose, and some media may load directly from X depending on your settings.
