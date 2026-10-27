@@ -28,24 +28,24 @@ Nitterium loads pages from your selected Nitter or Teapot instance in an Android
 To support its native features, Nitterium reads parts of the pages you open, such as avatar URLs, image links, and error messages. It also keeps local page snapshots to restore your reading position. Subscriptions and groups are managed locally on your device.
 
 > [!Important]
-> - Nitterium depends on independently operated Nitter and Teapot instances. Availability, supported features, and feed limits vary between instances. If one stops working or becomes rate limited, try another.
-> - Subscriptions and groups are stored on your device. Browsing requests go to the instance you choose, and some media may load directly from X depending on your settings.
+> - Nitterium depends on independently operated Nitter and Teapot instances. Availability, supported features, and feed limits vary between instances. If one stops working or becomes rate limited, try another
+> - Subscriptions and groups are stored on your device. Browsing requests go to the instance you choose, and some media may load directly from X depending on your settings
 
 ---
 
 ## ✨ FEATURES
 
-* 🔒 **Privacy First**: No ads, no tracking, and no Twitter/X account required.
-* 📌 **Local subscriptions**: Save profiles on your device, sort them by username or subscription date, or arrange them manually.
-* 🗂️ **Grouped feeds**: Browse posts from a selected group. Give groups their own names, icons, and colors.
-* 👆 **Long-Press & Sharing**: Easily share, copy, or open links, tweets, and media directly via intuitive long-press actions.
-* 🖼️ **Intuitive Image Viewer**: Easily exit the image viewer by swiping up or down, and save images directly to your device.
-* 🔄 **Pull-to-Refresh**: Swipe down to reload content seamlessly.
-* 🎨 **Dynamic Theming**: Beautiful Material 3 design that automatically adapts to your system theme and wallpaper (Android 12+).
-* 🚀 **Backup and restore**: Export subscriptions, groups, and settings, and review a backup before restoring it. Import subscriptions from QuaX app backups.
-* 🔗 **Supported links**: Open supported Twitter/X and Nitter links in the app.
-* 🌍 **RTL Support**: Supports RTL content by default.
-* ❤️ **Instance selection**: Choose a built-in instance or add your own. Switch from an unavailable instance while keeping the current page.
+* 🔒 **Privacy First**: No ads, no tracking, and no Twitter/X account required
+* 📌 **Local subscriptions**: Save profiles on your device, sort them by username or subscription date, or arrange them manually
+* 🗂️ **Grouped feeds**: Browse posts from a selected group. Give groups their own names, icons, and colors
+* 👆 **Long-Press & Sharing**: Easily share, copy, or open links, tweets, and media directly via intuitive long-press actions
+* 🖼️ **Intuitive Image Viewer**: Easily exit the image viewer by swiping up or down, and save images directly to your device
+* 🔄 **Pull-to-Refresh**: Swipe down to reload content seamlessly
+* 🎨 **Dynamic Theming**: Beautiful Material 3 design that automatically adapts to your system theme and wallpaper (Android 12+)
+* 🚀 **Backup and restore**: Export subscriptions, groups, and settings, and review a backup before restoring it. Import subscriptions from QuaX app backups
+* 🔗 **Supported links**: Open supported Twitter/X and Nitter links in the app
+* 🌍 **RTL Support**: Supports RTL content by default
+* ❤️ **Instance selection**: Choose a built-in instance or add your own. Switch from an unavailable instance while keeping the current page
 
 ---
 
